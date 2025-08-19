@@ -38,7 +38,7 @@ public class ProblemSessionService {
     private ObjectMapper objectMapper;
 
     /**
-     * 문제풀이 세션 생성
+     * 문제풀이 세션 생성 (키워드 기반)
      */
     public Map<String, Object> createProblemSession(String title, String userUuid,
                                                     String subjectUuid, int questionCount,
@@ -48,13 +48,17 @@ public class ProblemSessionService {
 
             // 1. 새로운 채팅 세션 생성
             String sessionId = UUID.randomUUID().toString();
-            ChatSession chatSession = new ChatSession();
-            chatSession.setUuid(sessionId);
-            chatSession.setChatTitle(title);
-            // userUuid와 subjectUuid는 엔티티 관계를 통해 설정해야 함
-            chatSession.setCreatedData(LocalDateTime.now());
+            ChatSession chatSession = ChatSession.builder()
+                    .uuid(sessionId)
+                    .title(title)
+                    .createdAt(LocalDateTime.now())
+                    .updatedAt(LocalDateTime.now())
+                    .status(ChatSession.SessionStatus.ACTIVE)
+                    .generatedProblemCount(0)
+                    .messages(new ArrayList<>()) // 빈 리스트로 초기화
+                    .build();
 
-            // 2. 세션 메타데이터 설정
+            // 2. 세션 메타데이터를 extractedKeywords 필드에 임시 저장
             Map<String, Object> sessionMetadata = new HashMap<>();
             sessionMetadata.put("status", "WAITING");
             sessionMetadata.put("currentQuestionIndex", 0);
@@ -63,14 +67,14 @@ public class ProblemSessionService {
             sessionMetadata.put("difficulty", difficulty);
             sessionMetadata.put("category", category);
 
-            // JSON으로 변환하여 messages 필드에 저장
+            // 메타데이터를 JSON으로 변환하여 임시 저장
             String metadataJson = objectMapper.writeValueAsString(sessionMetadata);
-            chatSession.setMessages(metadataJson);
+            chatSession.setExtractedKeywords(metadataJson);
 
             // 3. 데이터베이스에 저장
             ChatSession savedSession = chatSessionRepository.save(chatSession);
 
-            // 4. 임시 문제 데이터 생성
+            // 4. 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
             Problem problem = createMockProblem(sessionId, userUuid, subjectUuid, questionCount);
             problemRepository.save(problem);
 
@@ -97,10 +101,18 @@ public class ProblemSessionService {
     }
 
     /**
-     * 임시 문제 데이터 생성
+     * 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
      */
     private Problem createMockProblem(String sessionId, String userUuid, String subjectUuid, int questionCount) {
         try {
+            // 기존 DB 구조에 맞는 문제 데이터 생성
+            Map<String, Object> problemData = new HashMap<>();
+            problemData.put("title", "AI 생성 문제");
+            problemData.put("source", "OpenAI GPT-3.5-turbo");
+            problemData.put("keywords", "일반학습, 종합문제, 기본지식");
+            problemData.put("createdAt", LocalDateTime.now().toString());
+            problemData.put("totalQuestions", questionCount);
+
             List<Map<String, Object>> questions = new ArrayList<>();
 
             // 샘플 문제들 생성
@@ -111,15 +123,14 @@ public class ProblemSessionService {
                 question.put("options", Arrays.asList("선택지 1", "선택지 2", "선택지 3", "선택지 4", "선택지 5"));
                 question.put("correctAnswer", 0);
                 question.put("difficulty", "보통");
-                question.put("timeLimit", 30);
+                question.put("timeLimit", 45);
                 question.put("hint", "힌트: 첫 번째 선택지를 고려해보세요.");
+                question.put("keyword", "일반학습, 종합문제");
+                question.put("explanation", "이것은 일반적인 학습 문제입니다.");
                 questions.add(question);
             }
 
-            Map<String, Object> problemData = new HashMap<>();
             problemData.put("questions", questions);
-            problemData.put("totalCount", questionCount);
-            problemData.put("createdAt", LocalDateTime.now().toString());
 
             String problemsJson = objectMapper.writeValueAsString(problemData);
 
@@ -232,18 +243,18 @@ public class ProblemSessionService {
     }
 
     /**
-     * 현재 문제 인덱스 조회
+     * 현재 문제 인덱스 조회 (extractedKeywords에서 메타데이터 파싱)
      */
     private int getCurrentQuestionIndex(ChatSession session) {
-        String messagesJson = session.getMessages();
+        String metadataJson = session.getExtractedKeywords();
 
-        if (messagesJson == null || messagesJson.isEmpty()) {
+        if (metadataJson == null || metadataJson.isEmpty()) {
             return 0; // 기본값: 첫 번째 문제
         }
 
         try {
-            JsonNode messagesNode = objectMapper.readTree(messagesJson);
-            return messagesNode.path("currentQuestionIndex").asInt(0);
+            JsonNode metadataNode = objectMapper.readTree(metadataJson);
+            return metadataNode.path("currentQuestionIndex").asInt(0);
         } catch (Exception e) {
             log.warn("현재 문제 인덱스 파싱 실패, 기본값 사용 - sessionId: {}", session.getUuid());
             return 0;
@@ -295,15 +306,15 @@ public class ProblemSessionService {
             }
         }
 
-        // 메시지에서 현재 상태 파싱
+        // extractedKeywords에서 현재 상태 파싱
         try {
-            String messagesJson = session.getMessages();
-            if (messagesJson != null && !messagesJson.isEmpty()) {
-                JsonNode messagesNode = objectMapper.readTree(messagesJson);
+            String metadataJson = session.getExtractedKeywords();
+            if (metadataJson != null && !metadataJson.isEmpty()) {
+                JsonNode metadataNode = objectMapper.readTree(metadataJson);
 
-                response.setStatus(messagesNode.path("status").asText("WAITING"));
-                response.setCurrentQuestionNumber(messagesNode.path("currentQuestionIndex").asInt(0) + 1);
-                response.setParticipantCount(messagesNode.path("participantCount").asInt(1));
+                response.setStatus(metadataNode.path("status").asText("WAITING"));
+                response.setCurrentQuestionNumber(metadataNode.path("currentQuestionIndex").asInt(0) + 1);
+                response.setParticipantCount(metadataNode.path("participantCount").asInt(1));
             } else {
                 response.setStatus("WAITING");
                 response.setCurrentQuestionNumber(1);
@@ -316,7 +327,7 @@ public class ProblemSessionService {
             response.setParticipantCount(1);
         }
 
-        response.setStartedAt(session.getCreatedData());
+        response.setStartedAt(session.getCreatedAt());
 
         // 기본값 설정
         if (response.getTotalQuestions() == 0) {
@@ -345,15 +356,21 @@ public class ProblemSessionService {
         }
 
         ChatSession session = sessionOpt.get();
-        String messagesJson = session.getMessages();
+
+        // 세션 상태 확인
+        if (session.getStatus() != ChatSession.SessionStatus.ACTIVE) {
+            return false;
+        }
+
+        String metadataJson = session.getExtractedKeywords();
 
         try {
-            if (messagesJson != null && !messagesJson.isEmpty()) {
-                JsonNode messagesNode = objectMapper.readTree(messagesJson);
-                String status = messagesNode.path("status").asText("WAITING");
+            if (metadataJson != null && !metadataJson.isEmpty()) {
+                JsonNode metadataNode = objectMapper.readTree(metadataJson);
+                String status = metadataNode.path("status").asText("WAITING");
                 return "IN_PROGRESS".equals(status) || "WAITING".equals(status);
             }
-            // messages가 없으면 WAITING 상태로 간주
+            // metadata가 없으면 WAITING 상태로 간주
             return true;
         } catch (Exception e) {
             log.warn("세션 상태 확인 실패 - sessionId: {}", sessionId);
@@ -365,15 +382,90 @@ public class ProblemSessionService {
      * 참가자 여부 확인
      */
     public boolean isParticipant(String sessionId, String userId) {
-        // 현재 구조상 별도의 참가자 테이블이 없으므로
-        // 세션 생성자인지 확인하거나 기본적으로 허용
         Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
         if (!sessionOpt.isPresent()) {
             return false;
         }
 
         ChatSession session = sessionOpt.get();
-        // 세션 생성자이거나 모든 사용자 허용 (현재는 모든 사용자 허용)
+        // User 관계를 통해 세션 소유자 확인
+        if (session.getUser() != null) {
+            return session.getUser().getUuid().equals(userId);
+        }
+
+        // User 관계가 없으면 모든 사용자 허용
         return true;
+    }
+
+    /**
+     * 세션 메타데이터 업데이트
+     */
+    public void updateSessionMetadata(String sessionId, Map<String, Object> updates) {
+        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
+        if (!sessionOpt.isPresent()) {
+            throw new RuntimeException("세션을 찾을 수 없습니다.");
+        }
+
+        ChatSession session = sessionOpt.get();
+        String metadataJson = session.getExtractedKeywords();
+
+        try {
+            Map<String, Object> existingData = new HashMap<>();
+
+            if (metadataJson != null && !metadataJson.isEmpty()) {
+                JsonNode metadataNode = objectMapper.readTree(metadataJson);
+                existingData = objectMapper.convertValue(metadataNode, Map.class);
+            }
+
+            // 업데이트할 데이터 병합
+            existingData.putAll(updates);
+
+            // 다시 JSON으로 변환하여 저장
+            String updatedContent = objectMapper.writeValueAsString(existingData);
+            session.setExtractedKeywords(updatedContent);
+            session.setUpdatedAt(LocalDateTime.now());
+
+            chatSessionRepository.save(session);
+
+            log.info("세션 메타데이터 업데이트 완료 - sessionId: {}", sessionId);
+        } catch (Exception e) {
+            log.error("세션 메타데이터 업데이트 실패 - sessionId: {}", sessionId, e);
+            throw new RuntimeException("세션 메타데이터 업데이트에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 다음 문제로 이동
+     */
+    public Map<String, Object> moveToNextQuestion(String sessionId) {
+        try {
+            Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
+            if (!sessionOpt.isPresent()) {
+                throw new RuntimeException("세션을 찾을 수 없습니다.");
+            }
+
+            ChatSession session = sessionOpt.get();
+            int currentIndex = getCurrentQuestionIndex(session);
+
+            // 현재 인덱스를 1 증가
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("currentQuestionIndex", currentIndex + 1);
+            updates.put("status", "IN_PROGRESS");
+
+            updateSessionMetadata(sessionId, updates);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("currentQuestionNumber", currentIndex + 2);
+            result.put("message", "다음 문제로 이동했습니다.");
+
+            return result;
+        } catch (Exception e) {
+            log.error("다음 문제 이동 실패 - sessionId: {}", sessionId, e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "다음 문제로 이동에 실패했습니다: " + e.getMessage());
+            return errorResult;
+        }
     }
 }
