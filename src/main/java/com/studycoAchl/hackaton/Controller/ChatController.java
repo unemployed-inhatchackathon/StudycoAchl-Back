@@ -38,7 +38,7 @@ public class ChatController {
     }
 
     // 채팅방 생성
-    @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions")
+    @PostMapping(value = "/users/{userUuid}/subjects/{subjectUuid}/sessions", consumes = "text/plain")
     public ResponseEntity<ChatSession> createSession(
             @PathVariable
             @Parameter

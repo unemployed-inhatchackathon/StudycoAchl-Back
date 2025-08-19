@@ -22,7 +22,7 @@ public class SubjectController {
     }
 
     // 과목 생성
-    @PostMapping("/users/{userUuid}/subjects")
+    @PostMapping(value = "/users/{userUuid}/subjects", consumes = "text/plain")
     public ResponseEntity<Subject> createSubject(
             @PathVariable
             @Parameter
