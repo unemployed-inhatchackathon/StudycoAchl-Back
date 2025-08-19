@@ -1,15 +1,21 @@
-package com.studycoAchl.hackaton.domain;
+package com.studycoAchl.hackaton.entity;
 
 import jakarta.persistence.*;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "problem")
-@EntityListeners(AuditingEntityListener.class)
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class Problem {
+
     @Id
     @Column(name = "UUID")
     private String uuid;
@@ -18,55 +24,36 @@ public class Problem {
     private String problems;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_session_uuid", referencedColumnName = "UUID")
+    private ChatSession chatSession;
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
     private User user;
-
-    @Column(name = "user_uuid", insertable = false, updatable = false)
-    private String userUuid;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
     private Subject subject;
 
+    // 추가 필드들 (기존 코드 호환성을 위해)
+    @Column(name = "user_uuid", insertable = false, updatable = false)
+    private String userUuid;
+
     @Column(name = "subject_uuid", insertable = false, updatable = false)
     private String subjectUuid;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_session_uuid", referencedColumnName = "UUID")
-    private ChatSession chatSession;
 
     @Column(name = "chat_session_uuid", insertable = false, updatable = false)
     private String chatSessionUuid;
 
-    @CreatedDate
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "created_data")
+    private LocalDateTime createdData;
 
-    // 기본 생성자
-    protected Problem() {}
-
-    // 생성자
-    public Problem(String uuid, String problems, String userUuid, String subjectUuid, String chatSessionUuid) {
-        this.uuid = uuid;
-        this.problems = problems;
-        this.userUuid = userUuid;
-        this.subjectUuid = subjectUuid;
-        this.chatSessionUuid = chatSessionUuid;
+    // 편의 메서드
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdData = createdAt;
     }
 
-    // Getters and Setters
-    public String getUuid() { return uuid; }
-    public void setUuid(String uuid) { this.uuid = uuid; }
-    public String getProblems() { return problems; }
-    public void setProblems(String problems) { this.problems = problems; }
-    public User getUser() { return user; }
-    public String getUserUuid() { return userUuid; }
-    public void setUserUuid(String userUuid) { this.userUuid = userUuid; }
-    public Subject getSubject() { return subject; }
-    public String getSubjectUuid() { return subjectUuid; }
-    public void setSubjectUuid(String subjectUuid) { this.subjectUuid = subjectUuid; }
-    public ChatSession getChatSession() { return chatSession; }
-    public String getChatSessionUuid() { return chatSessionUuid; }
-    public void setChatSessionUuid(String chatSessionUuid) { this.chatSessionUuid = chatSessionUuid; }
-    public LocalDateTime getCreatedAt() { return createdAt; }
+    public LocalDateTime getCreatedAt() {
+        return this.createdData;
+    }
 }
