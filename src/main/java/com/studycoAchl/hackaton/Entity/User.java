@@ -19,7 +19,7 @@ import java.util.UUID;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    //@Column(name = "uuid", columnDefinition = "BINARY(16)")
+    @Column(name = "uuid", columnDefinition = "Binary(16)")
     private UUID uuid;
 
     @Column(name = "token", length = 500)

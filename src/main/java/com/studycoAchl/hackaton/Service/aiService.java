@@ -1,5 +1,6 @@
 package com.studycoAchl.hackaton.Service;
 
+import org.hibernate.cfg.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -12,9 +13,11 @@ import java.util.Map;
 
 @Service
 public class aiService {
-    @Value("openai.api.key")
+    @Value("${openai.api.key}")
     private String apiKey;
+
     private final String OPENAI_URL = "https://api.openai.com/v1/chat/completions";
+
 
     public String generateResponse(String userMessage, String subjectName) {
         RestTemplate restTemplate = new RestTemplate();

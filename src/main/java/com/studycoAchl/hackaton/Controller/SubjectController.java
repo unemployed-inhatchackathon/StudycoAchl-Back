@@ -6,6 +6,7 @@ import com.studycoAchl.hackaton.Entity.Subject;
 import com.studycoAchl.hackaton.Service.SubjectService;
 import io.swagger.v3.oas.annotations.Parameter;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,15 +23,22 @@ public class SubjectController {
     }
 
     // 과목 생성
-    @PostMapping(value = "/users/{userUuid}/subjects", consumes = "text/plain")
-    public ResponseEntity<Subject> createSubject(
+    @PostMapping(value = "/users/{userUuid}/subjects", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<CreateSubject> createSubject(
             @PathVariable
             @Parameter
             UUID userUuid,
-            @RequestBody String name) {  // JSON 대신 String
+            @RequestBody String name) {
 
         Subject createdSubject = subjectService.createSubject(userUuid, name);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdSubject);
+
+        CreateSubject response = new CreateSubject(
+                createdSubject.getUuid(),
+                createdSubject.getName(),
+                createdSubject.getCreatedAt()
+        );
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     // 사용자의 과목 목록 조회

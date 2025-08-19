@@ -8,6 +8,7 @@ import com.studycoAchl.hackaton.Repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.Service.ChatSessionService;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.servlet.http.HttpServletRequest;
+import com.studycoAchl.hackaton.Service.aiService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -24,10 +25,14 @@ public class ChatController {
 
     private final ChatSessionService chatSessionService;
 
+    private final aiService aiService;
+
     public ChatController(ChatSessionRepository chatSessionRepository,
-                          ChatSessionService chatSessionService) {
+                          ChatSessionService chatSessionService,
+                          aiService aiService) {
         this.chatSessionRepository = chatSessionRepository;
         this.chatSessionService = chatSessionService;
+        this.aiService = aiService;
     }
 
     // 채팅방 목록 조회
@@ -68,9 +73,9 @@ public class ChatController {
         }
     }
 
-    @PostMapping("/sessions/{sessionUuid}/messages")
+    @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions/{sessionUuid}/messages")
     public ResponseEntity<ChatSession> addMessage(
-            @PathVariable @Parameter UUID sessionUuid,
+            @PathVariable UUID sessionUuid,
             @RequestBody MessageRequest messageRequest) {
 
         Optional<ChatSession> optionalSession = chatSessionRepository.findById(sessionUuid);
@@ -81,8 +86,8 @@ public class ChatController {
 
         ChatSession session = optionalSession.get();
 
-        // 새 메시지 생성
-        ChatMessage newMessage = new ChatMessage(
+        // 1. 사용자 메시지 생성 및 저장
+        ChatMessage userMessage = new ChatMessage(
                 UUID.randomUUID().toString(),
                 messageRequest.getSender(),
                 messageRequest.getContent(),
@@ -90,11 +95,40 @@ public class ChatController {
                 LocalDateTime.now()
         );
 
-        // 메시지 추가
-        session.getMessages().add(newMessage);
-        session.setCreatedAt(LocalDateTime.now()); // 최근 활동 시간 업데이트
+        session.getMessages().add(userMessage);
 
-        // 저장
+        // 2. 사용자가 보낸 메시지면 AI 응답 생성
+        if ("USER".equals(messageRequest.getSender())) {
+            try {
+                String subjectName = session.getSubject().getName();
+
+                // AI 응답 생성
+                String aiResponse = aiService.generateResponse(messageRequest.getContent(), subjectName);
+
+                // AI 메시지 생성 및 추가
+                ChatMessage aiMessage = new ChatMessage(
+                        UUID.randomUUID().toString(),
+                        "AI",
+                        aiResponse,
+                        null,
+                        LocalDateTime.now()
+                );
+
+                session.getMessages().add(aiMessage);
+            } catch (Exception e) {
+                // AI 오류 시 에러 메시지 추가
+                ChatMessage errorMessage = new ChatMessage(
+                        UUID.randomUUID().toString(),
+                        "AI",
+                        "죄송합니다. 현재 AI 서비스에 문제가 있습니다.",
+                        null,
+                        LocalDateTime.now()
+                );
+                session.getMessages().add(errorMessage);
+            }
+        }
+
+        session.setCreatedAt(LocalDateTime.now());
         ChatSession updatedSession = chatSessionRepository.save(session);
         return ResponseEntity.ok(updatedSession);
     }

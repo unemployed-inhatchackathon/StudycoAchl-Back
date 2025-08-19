@@ -8,7 +8,6 @@ import java.time.LocalDateTime;
 @JsonIgnoreProperties(ignoreUnknown = true) // 알 수 없는 필드 무시
 public class ChatMessage {
 
-    private String id;
     private String sender; // "USER" or "AI"
     private String content;
     private String imageUrl; // 선택적, 이미지 첨부시 사용
@@ -21,7 +20,6 @@ public class ChatMessage {
 
     // 생성자
     public ChatMessage(String id, String sender, String content, LocalDateTime sentAt) {
-        this.id = id;
         this.sender = sender;
         this.content = content;
         this.sentAt = sentAt;
@@ -29,7 +27,6 @@ public class ChatMessage {
 
     // 이미지 포함 생성자
     public ChatMessage(String id, String sender, String content, String imageUrl, LocalDateTime sentAt) {
-        this.id = id;
         this.sender = sender;
         this.content = content;
         this.imageUrl = imageUrl;
@@ -37,13 +34,6 @@ public class ChatMessage {
     }
 
     // Getters and Setters
-    public String getId() {
-        return id;
-    }
-
-    public void setId(String id) {
-        this.id = id;
-    }
 
     public String getSender() {
         return sender;
@@ -84,7 +74,6 @@ public class ChatMessage {
     @Override
     public String toString() {
         return "ChatMessage{" +
-                "id='" + id + '\'' +
                 ", sender='" + sender + '\'' +
                 ", content='" + content + '\'' +
                 ", sentAt=" + sentAt +

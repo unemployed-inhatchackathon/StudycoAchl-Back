@@ -22,7 +22,7 @@ import java.util.UUID;
 public class ChatSession {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "uuid", columnDefinition = "BINARY(16)")
+    @Column(name = "uuid", columnDefinition = "Binary(16)")
     private UUID uuid;
 
     @Column(name = "title", length = 200)
@@ -32,7 +32,7 @@ public class ChatSession {
     @Column(name = "messages", columnDefinition = "JSON")
     private List<ChatMessage> messages;
 
-    @Column(name = "created_at") // 스네이크케이스로 변경
+    @Column(name = "created_at")
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -78,6 +78,9 @@ public class ChatSession {
         // UUID 자동 생성
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
+        }
+        if (messages == null) {
+            messages = new ArrayList<>();
         }
     }
 }

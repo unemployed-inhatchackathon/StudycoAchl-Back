@@ -1,6 +1,7 @@
 package com.studycoAchl.hackaton.Entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.Builder;
@@ -21,7 +22,7 @@ import java.util.UUID;
 public class Subject {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    //@Column(name = "uuid", columnDefinition = "BINARY(16)")
+    @Column(name = "uuid", columnDefinition = "Binary(16)")
     private UUID uuid;
 
     @Column(name = "name", nullable = false)
@@ -37,6 +38,7 @@ public class Subject {
 
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonManagedReference
+    @JsonIgnore
     private List<ChatSession> chatSessions = new ArrayList<>();
 
     // 생성자
