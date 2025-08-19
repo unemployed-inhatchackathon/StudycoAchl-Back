@@ -3,11 +3,10 @@ package com.studycoAchl.hackaton;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "com.studycoAchl.hackaton")
 public class HackatonApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(HackatonApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(HackatonApplication.class, args);
+    }
 }
