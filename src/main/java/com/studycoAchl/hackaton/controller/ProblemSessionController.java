@@ -3,8 +3,11 @@ package com.studycoAchl.hackaton.controller;
 import com.studycoAchl.hackaton.dto.ApiResponse;
 import com.studycoAchl.hackaton.dto.CurrentQuestionResponse;
 import com.studycoAchl.hackaton.dto.SessionStatusResponse;
+import com.studycoAchl.hackaton.entity.Problem;
+import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.service.ProblemSessionService;
 import com.studycoAchl.hackaton.service.ProblemGenerationService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +16,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/problem-session")
@@ -25,6 +29,9 @@ public class ProblemSessionController {
 
     @Autowired
     private ProblemGenerationService problemGenerationService;
+
+    @Autowired
+    private ProblemRepository problemRepository;
 
     /**
      * 채팅 세션 기반 AI 문제 생성 및 세션 시작
@@ -100,6 +107,36 @@ public class ProblemSessionController {
         } catch (Exception e) {
             log.error("키워드 기반 문제 생성 실패", e);
             return ResponseEntity.ok(ApiResponse.error("키워드 기반 문제 생성 실패: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 생성된 문제 내용 조회
+     */
+    @GetMapping("/problem/{problemUuid}")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProblemContent(
+            @PathVariable String problemUuid) {
+
+        try {
+            log.info("문제 내용 조회 요청 - problemUuid: {}", problemUuid);
+
+            Optional<Problem> problemOpt = problemRepository.findById(problemUuid);
+            if (!problemOpt.isPresent()) {
+                return ResponseEntity.ok(ApiResponse.error("문제를 찾을 수 없습니다."));
+            }
+
+            Problem problem = problemOpt.get();
+            String problemsJson = problem.getProblems();
+
+            // JSON을 Map으로 파싱
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, Object> problemData = mapper.readValue(problemsJson, Map.class);
+
+            return ResponseEntity.ok(ApiResponse.success(problemData, "문제 내용을 성공적으로 가져왔습니다."));
+
+        } catch (Exception e) {
+            log.error("문제 내용 조회 실패 - problemUuid: {}", problemUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("문제 내용 조회 실패: " + e.getMessage()));
         }
     }
 
