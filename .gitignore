@@ -5,6 +5,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+application-local.properties
+**/application-local.properties
+
 ### STS ###
 .apt_generated
 .classpath
@@ -35,3 +38,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+.env
+*.env
+src/main/resources/application.properties
