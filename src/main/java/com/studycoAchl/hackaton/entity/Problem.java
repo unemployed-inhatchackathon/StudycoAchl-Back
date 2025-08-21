@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "problem")
@@ -17,8 +18,9 @@ import java.time.LocalDateTime;
 public class Problem {
 
     @Id
-    @Column(name = "UUID")
-    private String uuid;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    private UUID uuid;
 
     @Column(name = "problems", columnDefinition = "JSON")
     private String problems;
@@ -35,15 +37,15 @@ public class Problem {
     @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
     private Subject subject;
 
-    // 추가 필드들 (기존 코드 호환성을 위해)
+    // 추가 필드들 (기존 코드 호환성을 위해) - UUID 타입으로 변경
     @Column(name = "user_uuid", insertable = false, updatable = false)
-    private String userUuid;
+    private UUID userUuid;
 
     @Column(name = "subject_uuid", insertable = false, updatable = false)
-    private String subjectUuid;
+    private UUID subjectUuid;
 
     @Column(name = "chat_session_uuid", insertable = false, updatable = false)
-    private String chatSessionUuid;
+    private UUID chatSessionUuid;
 
     @Column(name = "created_data")
     private LocalDateTime createdData;

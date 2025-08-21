@@ -1,4 +1,3 @@
-// ================ src/main/java/com/studycoAchl/hackaton/config/SecurityConfig.java ================
 package com.studycoAchl.hackaton.config;
 
 import org.springframework.context.annotation.Bean;
@@ -12,11 +11,6 @@ import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
@@ -28,15 +22,18 @@ public class SecurityConfig {
                 // 개발용 설정: CSRF 완전 비활성화
                 .csrf(csrf -> csrf.disable())
 
-                // CORS 허용 (프론트엔드 연동을 위해)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                // CORS는 별도 CorsConfig에서 처리
+                .cors(cors -> {})
 
                 // URL별 접근 권한 설정
                 .authorizeHttpRequests(authz -> authz
                         // Health check는 인증 없이 접근 가능
                         .requestMatchers("/api/health").permitAll()
 
-                        // API 문서나 개발 도구 (있다면) 허용
+                        // Swagger UI 접근 허용
+                        .requestMatchers("/api/swagger-ui/**", "/api/api-docs/**", "/api/swagger-ui.html").permitAll()
+
+                        // API 문서나 개발 도구 허용
                         .requestMatchers("/api/api/problem-session/health").permitAll()
 
                         // 나머지 API는 Basic 인증 필요
@@ -68,27 +65,6 @@ public class SecurityConfig {
                 .build();
 
         return new InMemoryUserDetailsManager(admin);
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-
-        // 개발용: 모든 도메인 허용
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
-
-        // 모든 HTTP 메서드 허용
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD"));
-
-        // 모든 헤더 허용
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-
-        // 쿠키/인증 정보 포함 허용
-        configuration.setAllowCredentials(true);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
     }
 
     @Bean

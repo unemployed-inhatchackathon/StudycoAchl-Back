@@ -7,47 +7,42 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.UUID;
 
 @Repository
-public interface ChatSessionRepository extends JpaRepository<ChatSession, String> {
+public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> {
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid")
-    List<ChatSession> findByUserUuid(@Param("userUuid") String userUuid);
+    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.subject.uuid = :subjectUuid")
-    List<ChatSession> findBySubjectUuid(@Param("subjectUuid") String subjectUuid);
+    List<ChatSession> findByUser_Uuid(UUID userUuid);
+    List<ChatSession> findBySubject_Uuid(UUID subjectUuid);
+    List<ChatSession> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
 
-    // title 필드로 수정 (ChatSession 엔티티에서 title 필드 사용)
+    // 제목 기반 검색
     List<ChatSession> findByTitleContaining(String title);
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.subject.uuid = :subjectUuid")
-    List<ChatSession> findByUserUuidAndSubjectUuid(@Param("userUuid") String userUuid, @Param("subjectUuid") String subjectUuid);
+    // 상태 기반 조회
+    List<ChatSession> findByStatus(ChatSession.SessionStatus status);
+    List<ChatSession> findByUser_UuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);
 
-    // createdAt 필드로 수정 (ChatSession 엔티티에서 createdAt 필드 사용)
-    @Query("SELECT cs FROM ChatSession cs ORDER BY cs.createdAt DESC")
-    List<ChatSession> findRecentSessions();
+    // 시간 기반 정렬
+    List<ChatSession> findByUser_UuidOrderByCreatedDataDesc(UUID userUuid);
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid ORDER BY cs.createdAt DESC")
-    List<ChatSession> findRecentSessionsByUser(@Param("userUuid") String userUuid);
+    // ========== 키워드 및 문제 생성 관련 (@Query 사용) ==========
 
-    // 추가 유용한 메서드들
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.status = :status")
-    List<ChatSession> findByStatus(@Param("status") ChatSession.SessionStatus status);
+    // 키워드가 추출된 세션들
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.extractedKeywords IS NOT NULL AND cs.extractedKeywords != ''")
+    List<ChatSession> findSessionsWithKeywords();
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.status = :status")
-    List<ChatSession> findByUserUuidAndStatus(@Param("userUuid") String userUuid,
-                                              @Param("status") ChatSession.SessionStatus status);
+    // 키워드로 세션 검색
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.extractedKeywords LIKE %:keyword%")
+    List<ChatSession> findByExtractedKeywordsContaining(@Param("keyword") String keyword);
 
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.status = 'ACTIVE' ORDER BY cs.updatedAt DESC")
-    List<ChatSession> findActiveSessionsByUser(@Param("userUuid") String userUuid);
-
-    @Query("SELECT COUNT(cs) FROM ChatSession cs WHERE cs.user.uuid = :userUuid")
-    Long countByUserUuid(@Param("userUuid") String userUuid);
-
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.generatedProblemCount > 0 ORDER BY cs.lastProblemGeneration DESC")
+    // 문제가 생성된 세션들
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.generatedProblemCount > 0")
     List<ChatSession> findSessionsWithProblems();
 
-    // 호환성을 위한 메서드들 (기존 코드에서 사용하는 메서드명 지원)
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.title LIKE %:title%")
-    List<ChatSession> findByChatTitleContaining(@Param("title") String title);
+    // 사용자별 문제 생성된 세션들
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.generatedProblemCount > 0")
+    List<ChatSession> findSessionsWithProblemsByUser(@Param("userUuid") UUID userUuid);
 }

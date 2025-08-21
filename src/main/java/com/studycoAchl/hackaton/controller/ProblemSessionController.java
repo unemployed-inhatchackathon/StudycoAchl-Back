@@ -8,48 +8,42 @@ import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.service.ProblemSessionService;
 import com.studycoAchl.hackaton.service.ProblemGenerationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/problem-session")
+@RequiredArgsConstructor
+@Slf4j
 public class ProblemSessionController {
 
-    private static final Logger log = LoggerFactory.getLogger(ProblemSessionController.class);
-
-    @Autowired
-    private ProblemSessionService sessionService;
-
-    @Autowired
-    private ProblemGenerationService problemGenerationService;
-
-    @Autowired
-    private ProblemRepository problemRepository;
+    private final ProblemSessionService sessionService;
+    private final ProblemGenerationService problemGenerationService;
+    private final ProblemRepository problemRepository;
 
     /**
      * 채팅 세션 기반 AI 문제 생성 및 세션 시작
      */
     @PostMapping("/start-from-chat")
     public ResponseEntity<ApiResponse<Map<String, Object>>> startFromChat(
-            @RequestParam String userId,
-            @RequestParam String chatSessionId,
-            @RequestParam(required = false) String subjectId,
+            @RequestParam UUID userId,
+            @RequestParam UUID chatSessionId,
+            @RequestParam(required = false) UUID subjectId,
             @RequestParam(defaultValue = "5") int questionCount) {
 
         try {
             log.info("채팅 기반 AI 문제 생성 요청 - userId: {}, chatSessionId: {}, count: {}",
                     userId, chatSessionId, questionCount);
 
-            if (subjectId == null || subjectId.isEmpty()) {
-                subjectId = "default-subject";
-                log.info("subjectId가 없어서 기본값 사용: {}", subjectId);
+            if (subjectId == null) {
+                return ResponseEntity.ok(ApiResponse.error("과목 ID는 필수입니다."));
             }
 
             Map<String, Object> result = problemGenerationService.generateProblemsFromChatSession(
@@ -76,18 +70,14 @@ public class ProblemSessionController {
      */
     @PostMapping("/generate-from-keywords")
     public ResponseEntity<ApiResponse<Map<String, Object>>> generateFromKeywords(
-            @RequestParam String userId,
-            @RequestParam(required = false) String subjectId,
+            @RequestParam UUID userId,
+            @RequestParam UUID subjectId,
             @RequestParam String keywords,
             @RequestParam(defaultValue = "학습자가 입력한 키워드를 바탕으로 한 문제") String context,
             @RequestParam(defaultValue = "5") int questionCount) {
 
         try {
             log.info("키워드 기반 AI 문제 생성 요청 - keywords: {}, count: {}", keywords, questionCount);
-
-            if (subjectId == null || subjectId.isEmpty()) {
-                subjectId = "keyword-subject";
-            }
 
             String[] keywordArray = keywords.split(",");
             for (int i = 0; i < keywordArray.length; i++) {
@@ -115,13 +105,13 @@ public class ProblemSessionController {
      */
     @GetMapping("/problem/{problemUuid}")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getProblemContent(
-            @PathVariable String problemUuid) {
+            @PathVariable UUID problemUuid) {
 
         try {
             log.info("문제 내용 조회 요청 - problemUuid: {}", problemUuid);
 
             Optional<Problem> problemOpt = problemRepository.findById(problemUuid);
-            if (!problemOpt.isPresent()) {
+            if (problemOpt.isEmpty()) {
                 return ResponseEntity.ok(ApiResponse.error("문제를 찾을 수 없습니다."));
             }
 
@@ -145,7 +135,7 @@ public class ProblemSessionController {
      */
     @GetMapping("/{sessionId}/current")
     public ResponseEntity<ApiResponse<CurrentQuestionResponse>> getCurrentQuestion(
-            @PathVariable String sessionId) {
+            @PathVariable UUID sessionId) {
 
         try {
             log.info("현재 문제 조회 요청 - sessionId: {}", sessionId);
@@ -167,7 +157,7 @@ public class ProblemSessionController {
      */
     @GetMapping("/{sessionId}/status")
     public ResponseEntity<ApiResponse<SessionStatusResponse>> getSessionStatus(
-            @PathVariable String sessionId) {
+            @PathVariable UUID sessionId) {
 
         try {
             log.info("세션 상태 조회 요청 - sessionId: {}", sessionId);
@@ -186,15 +176,15 @@ public class ProblemSessionController {
      * 다음 문제로 이동
      */
     @PostMapping("/{sessionId}/next")
-    public ResponseEntity<ApiResponse<CurrentQuestionResponse>> nextQuestion(
-            @PathVariable String sessionId) {
+    public ResponseEntity<ApiResponse<Map<String, Object>>> nextQuestion(
+            @PathVariable UUID sessionId) {
 
         try {
             log.info("다음 문제 요청 - sessionId: {}", sessionId);
 
-            CurrentQuestionResponse response = sessionService.getCurrentQuestion(sessionId);
+            Map<String, Object> result = sessionService.moveToNextQuestion(sessionId);
 
-            return ResponseEntity.ok(ApiResponse.success(response, "다음 문제로 이동했습니다."));
+            return ResponseEntity.ok(ApiResponse.success(result, "다음 문제로 이동했습니다."));
 
         } catch (Exception e) {
             log.error("다음 문제 이동 실패 - sessionId: {}", sessionId, e);
@@ -207,10 +197,10 @@ public class ProblemSessionController {
      */
     @PostMapping("/{sessionId}/submit")
     public ResponseEntity<ApiResponse<Map<String, Object>>> submitAnswer(
-            @PathVariable String sessionId,
+            @PathVariable UUID sessionId,
             @RequestParam int questionNumber,
             @RequestParam int selectedAnswer,
-            @RequestParam(required = false) String userId) {
+            @RequestParam(required = false) UUID userId) {
 
         try {
             log.info("답안 제출 - sessionId: {}, questionNumber: {}, selectedAnswer: {}",
@@ -218,7 +208,7 @@ public class ProblemSessionController {
 
             Map<String, Object> result = Map.of(
                     "success", true,
-                    "sessionId", sessionId,
+                    "sessionId", sessionId.toString(),
                     "questionNumber", questionNumber,
                     "selectedAnswer", selectedAnswer,
                     "message", "답안이 제출되었습니다. (채점 로직 구현 필요)"
@@ -237,14 +227,14 @@ public class ProblemSessionController {
      */
     @GetMapping("/{sessionId}/all-questions")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAllQuestions(
-            @PathVariable String sessionId) {
+            @PathVariable UUID sessionId) {
 
         try {
             log.info("전체 문제 조회 요청 - sessionId: {}", sessionId);
 
             Map<String, Object> result = Map.of(
                     "success", true,
-                    "sessionId", sessionId,
+                    "sessionId", sessionId.toString(),
                     "message", "전체 문제 조회 기능 구현 필요"
             );
 
@@ -289,8 +279,12 @@ public class ProblemSessionController {
         try {
             log.info("OpenAI 연결 테스트 시작");
 
+            // 테스트용 UUID 생성
+            UUID testUserId = UUID.randomUUID();
+            UUID testSubjectId = UUID.randomUUID();
+
             Map<String, Object> result = problemGenerationService.generateProblemsFromKeywords(
-                    "test-user", "test-subject",
+                    testUserId, testSubjectId,
                     Arrays.asList("테스트"), "OpenAI 연결 테스트", 1);
 
             if ((boolean) result.get("success")) {

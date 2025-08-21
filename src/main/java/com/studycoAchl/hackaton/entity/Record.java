@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigInteger;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "record")
@@ -18,8 +19,9 @@ import java.time.LocalDateTime;
 public class Record {
 
     @Id
-    @Column(name = "UUID")
-    private String uuid;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    private UUID uuid;
 
     @Column(name = "title")
     private String title;
@@ -54,4 +56,11 @@ public class Record {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
     private User user;
+
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
 }

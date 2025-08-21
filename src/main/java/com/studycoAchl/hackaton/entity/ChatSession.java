@@ -22,24 +22,25 @@ import java.util.stream.Collectors;
 public class ChatSession {
 
     @Id
-    @Column(name = "uuid", length = 36)
-    private String uuid;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    private UUID uuid;
 
-    @Column(name = "title", length = 200)
+    @Column(name = "chatTitle", length = 200)
     private String title;
 
-    // 팀원 방식: JSON으로 메시지 저장
+    // JSON으로 메시지 저장 (당신 방식 유지)
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "messages", columnDefinition = "JSON")
     private List<ChatMessage> messages;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    @Column(name = "created_data")
+    private LocalDateTime createdData;
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    // 문제 생성 기능을 위한 필드들
+    // 문제 생성 기능을 위한 필드들 (당신 방식 유지)
     @Column(name = "extracted_keywords", columnDefinition = "TEXT")
     private String extractedKeywords;
 
@@ -58,12 +59,12 @@ public class ChatSession {
 
     // JPA 관계 매핑
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
     @JsonBackReference
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
+    @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
     @JsonBackReference
     private Subject subject;
 
@@ -74,10 +75,18 @@ public class ChatSession {
         ACTIVE, COMPLETED, PAUSED
     }
 
+    // 생성자 (편의 메소드)
+    public ChatSession(User user, Subject subject, String title) {
+        this();
+        this.user = user;
+        this.subject = subject;
+        this.title = title;
+    }
+
     // ========== 메시지 관련 메소드들 (ChatMessage DTO 사용) ==========
 
     /**
-     * 메시지 추가 (기존 팀원 방식 유지)
+     * 메시지 추가 (기존 방식 유지)
      */
     public void addMessage(String sender, String content) {
         if (this.messages == null) {
@@ -253,11 +262,11 @@ public class ChatSession {
     }
 
     public void setCreatedData(LocalDateTime createdData) {
-        this.createdAt = createdData;
+        this.createdData = createdData;
     }
 
     public LocalDateTime getCreatedData() {
-        return this.createdAt;
+        return this.createdData;
     }
 
     public void incrementProblemCount() {
@@ -272,11 +281,8 @@ public class ChatSession {
 
     @PrePersist
     protected void onCreate() {
-        if (uuid == null) {
-            uuid = UUID.randomUUID().toString();
-        }
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
+        if (createdData == null) {
+            createdData = LocalDateTime.now();
         }
         if (updatedAt == null) {
             updatedAt = LocalDateTime.now();

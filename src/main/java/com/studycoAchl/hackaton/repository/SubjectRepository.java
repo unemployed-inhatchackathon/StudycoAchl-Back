@@ -2,27 +2,26 @@ package com.studycoAchl.hackaton.repository;
 
 import com.studycoAchl.hackaton.entity.Subject;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 @Repository
-public interface SubjectRepository extends JpaRepository<Subject, String> {
+public interface SubjectRepository extends JpaRepository<Subject, UUID> {
 
-    @Query("SELECT s FROM Subject s WHERE s.user.uuid = :userUuid")
-    List<Subject> findByUserUuid(@Param("userUuid") String userUuid);
+    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
 
+    List<Subject> findByUser_Uuid(UUID userUuid);
+
+    // 제목 기반 검색
     List<Subject> findByTitleContaining(String title);
+    Optional<Subject> findByUser_UuidAndTitle(UUID userUuid, String title);
 
-    @Query("SELECT s FROM Subject s WHERE s.user.uuid = :userUuid AND s.title = :title")
-    Optional<Subject> findByUserUuidAndTitle(@Param("userUuid") String userUuid, @Param("title") String title);
+    // 시간 기반 정렬
+    List<Subject> findByUser_UuidOrderByCreatedAtDesc(UUID userUuid);
 
-    @Query("SELECT s FROM Subject s ORDER BY s.createdAt DESC")
-    List<Subject> findRecentSubjects();
-
-    @Query("SELECT s FROM Subject s WHERE s.user.uuid = :userUuid ORDER BY s.createdAt DESC")
-    List<Subject> findRecentSubjectsByUser(@Param("userUuid") String userUuid);
+    // 존재 여부 확인
+    boolean existsByUser_UuidAndTitle(UUID userUuid, String title);
 }

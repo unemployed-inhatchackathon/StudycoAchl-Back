@@ -6,6 +6,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.UUID;
+
 @Entity
 @Table(name = "exams")
 @Data
@@ -15,8 +17,9 @@ import lombok.NoArgsConstructor;
 public class Exams {
 
     @Id
-    @Column(name = "UUID")
-    private String uuid;
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    private UUID uuid;
 
     @Column(name = "title")
     private String title;

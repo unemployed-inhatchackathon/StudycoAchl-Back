@@ -7,10 +7,10 @@ import com.theokanning.openai.service.OpenAiService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -18,21 +18,24 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class QuestionGenerationService {
 
-    private static final Logger log = LoggerFactory.getLogger(QuestionGenerationService.class);
     private final OpenAiService openAiService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Autowired
-    public QuestionGenerationService(OpenAiService openAiService) {
-        this.openAiService = openAiService;
-    }
+    @Value("${app.use-real-ai:true}")
+    private boolean useRealAi;
 
     /**
      * 메인 메서드: 키워드와 컨텍스트 기반 문제 생성 (JSON 형태로 반환)
      */
     public String generateQuestionsJson(List<String> keywords, String context, int questionCount) {
+        if (!useRealAi) {
+            return generateMockQuestions(keywords, context, questionCount);
+        }
+
         try {
             log.info("OpenAI로 문제 생성 시작 - keywords: {}, count: {}", keywords, questionCount);
 
@@ -53,23 +56,20 @@ public class QuestionGenerationService {
                     .getChoices().get(0).getMessage().getContent();
 
             log.info("OpenAI 응답 받음, 파싱 시작...");
-
-            // ★★★ OpenAI 응답 로그 추가 ★★★
-            log.info("=== OpenAI 원본 응답 시작 ===");
-            log.info(response);
-            log.info("=== OpenAI 원본 응답 끝 ===");
+            log.debug("=== OpenAI 원본 응답 ===\n{}", response);
 
             // OpenAI 응답을 JSON 형태로 파싱
             return parseOpenAIResponse(response, keywords, questionCount);
 
         } catch (Exception e) {
             log.error("OpenAI 문제 생성 실패", e);
-            throw new RuntimeException("AI 문제 생성 실패: " + e.getMessage());
+            // 실패 시 모의 문제 반환
+            return generateMockQuestions(keywords, context, questionCount);
         }
     }
 
     /**
-     * 고급 프롬프트 생성 (더 명확한 지침 추가)
+     * 고급 프롬프트 생성
      */
     private String createAdvancedPrompt(List<String> keywords, String context, int questionCount) {
         String keywordText = String.join(", ", keywords);
@@ -123,7 +123,7 @@ public class QuestionGenerationService {
     }
 
     /**
-     * OpenAI 응답을 JSON으로 파싱 (개선된 버전)
+     * OpenAI 응답을 JSON으로 파싱
      */
     private String parseOpenAIResponse(String response, List<String> keywords, int questionCount) {
         try {
@@ -136,17 +136,18 @@ public class QuestionGenerationService {
 
             ArrayNode questionsArray = objectMapper.createArrayNode();
 
-            // ★★★ 더 유연한 파싱 로직 ★★★
+            // 응답에서 문제들 파싱
             List<ParsedQuestion> parsedQuestions = parseQuestionsFromResponse(response);
 
             log.info("파싱 시도 결과: {}개 문제 발견", parsedQuestions.size());
 
-            // 파싱된 문제가 없다면 응답 전체를 분석해서 강제로 문제 생성
+            // 파싱된 문제가 없다면 대안 파싱 시도
             if (parsedQuestions.isEmpty()) {
                 log.warn("정규 파싱 실패, 대안 파싱 시도...");
                 parsedQuestions = tryAlternativeParsing(response, keywords);
             }
 
+            // 파싱된 문제들을 JSON으로 변환
             for (int i = 0; i < Math.min(parsedQuestions.size(), questionCount); i++) {
                 ParsedQuestion pq = parsedQuestions.get(i);
                 ObjectNode question = objectMapper.createObjectNode();
@@ -170,12 +171,9 @@ public class QuestionGenerationService {
                 questionsArray.add(question);
             }
 
-            // 여전히 문제가 없다면 기본 문제 생성
-            if (parsedQuestions.size() < questionCount) {
-                log.warn("파싱된 문제 수 부족: {}/{}, 기본 문제로 보완", parsedQuestions.size(), questionCount);
-                for (int i = parsedQuestions.size(); i < questionCount; i++) {
-                    questionsArray.add(createFallbackQuestion(i + 1, keywords));
-                }
+            // 부족한 문제는 기본 문제로 보완
+            for (int i = parsedQuestions.size(); i < questionCount; i++) {
+                questionsArray.add(createFallbackQuestion(i + 1, keywords));
             }
 
             root.set("questions", questionsArray);
@@ -185,18 +183,18 @@ public class QuestionGenerationService {
 
         } catch (Exception e) {
             log.error("OpenAI 응답 파싱 실패", e);
-            throw new RuntimeException("AI 응답 파싱 실패: " + e.getMessage());
+            // 파싱 실패 시 모의 문제 반환
+            return generateMockQuestions(keywords, "파싱 실패로 인한 대체", questionCount);
         }
     }
 
     /**
-     * 문제 파싱을 위한 정규식 처리 (개선된 버전)
+     * 문제 파싱을 위한 정규식 처리
      */
     private List<ParsedQuestion> parseQuestionsFromResponse(String response) {
         List<ParsedQuestion> questions = new ArrayList<>();
 
         try {
-            // 다양한 패턴으로 문제 분할 시도
             String[] problemBlocks = null;
 
             // 패턴 1: "문제 1:", "문제 2:" 등
@@ -221,8 +219,7 @@ public class QuestionGenerationService {
                         ParsedQuestion pq = parseSingleQuestion(problemBlocks[i]);
                         if (pq != null) {
                             questions.add(pq);
-                            log.debug("문제 {} 파싱 성공: {}", i,
-                                    pq.questionText.substring(0, Math.min(50, pq.questionText.length())));
+                            log.debug("문제 {} 파싱 성공", i);
                         }
                     } catch (Exception e) {
                         log.warn("문제 {} 파싱 실패", i, e);
@@ -239,20 +236,20 @@ public class QuestionGenerationService {
     }
 
     /**
-     * 단일 문제 파싱 (더 유연하게 개선)
+     * 단일 문제 파싱
      */
     private ParsedQuestion parseSingleQuestion(String questionBlock) {
         try {
             ParsedQuestion pq = new ParsedQuestion();
 
-            // 질문 추출 (여러 패턴 시도)
+            // 질문 추출
             String questionText = extractQuestionText(questionBlock);
             if (questionText == null || questionText.isEmpty()) {
                 return null;
             }
             pq.questionText = questionText;
 
-            // 선택지 추출 (여러 패턴 시도)
+            // 선택지 추출
             List<String> options = extractOptions(questionBlock);
             if (options.size() < 2) {
                 return null;
@@ -287,7 +284,7 @@ public class QuestionGenerationService {
     }
 
     /**
-     * 질문 텍스트 추출 (여러 패턴 지원)
+     * 질문 텍스트 추출
      */
     private String extractQuestionText(String block) {
         // 패턴 1: "질문:" 으로 시작
@@ -306,16 +303,11 @@ public class QuestionGenerationService {
             }
         }
 
-        // 패턴 3: 전체를 질문으로 간주
-        if (block.trim().length() > 10) {
-            return block.trim().substring(0, Math.min(200, block.trim().length()));
-        }
-
         return null;
     }
 
     /**
-     * 선택지 추출 (여러 패턴 지원)
+     * 선택지 추출
      */
     private List<String> extractOptions(String block) {
         List<String> options = new ArrayList<>();
@@ -327,18 +319,6 @@ public class QuestionGenerationService {
             String option = matcher1.group(1).trim();
             if (!option.isEmpty()) {
                 options.add(option);
-            }
-        }
-
-        // 패턴 2: "①", "②" 형태
-        if (options.isEmpty()) {
-            Pattern pattern2 = Pattern.compile("[①②③④⑤]\\s*(.+?)(?=[①②③④⑤]|정답:|해설:|$)", Pattern.DOTALL);
-            Matcher matcher2 = pattern2.matcher(block);
-            while (matcher2.find()) {
-                String option = matcher2.group(1).trim();
-                if (!option.isEmpty()) {
-                    options.add(option);
-                }
             }
         }
 
@@ -400,20 +380,16 @@ public class QuestionGenerationService {
         List<ParsedQuestion> questions = new ArrayList<>();
 
         try {
-            log.info("대안 파싱 시작 - 응답 길이: {}", response.length());
-
-            // 응답에서 질문처럼 보이는 부분을 찾아서 강제로 문제 생성
             if (response.length() > 50) {
                 ParsedQuestion pq = new ParsedQuestion();
 
-                // 응답의 첫 부분을 질문으로 사용
                 String[] sentences = response.split("[.?!]");
                 String questionText = sentences.length > 0 ? sentences[0] : response.substring(0, Math.min(100, response.length()));
 
                 pq.questionText = "AI 생성 문제: " + questionText.trim();
                 pq.options = Arrays.asList("선택지 1", "선택지 2 (정답)", "선택지 3", "선택지 4", "선택지 5");
                 pq.correctAnswer = 2;
-                pq.explanation = "OpenAI가 생성한 내용을 기반으로 한 문제입니다: " + response.substring(0, Math.min(200, response.length()));
+                pq.explanation = "OpenAI가 생성한 내용을 기반으로 한 문제입니다.";
                 pq.keyword = keywords.isEmpty() ? "AI생성" : keywords.get(0);
 
                 questions.add(pq);
@@ -435,24 +411,72 @@ public class QuestionGenerationService {
         String keyword = keywords.isEmpty() ? "일반" : keywords.get(0);
 
         question.put("id", questionNum);
-        question.put("question", String.format("문제 %d: %s 관련 질문입니다. (AI 파싱 실패로 인한 대체 문제)", questionNum, keyword));
+        question.put("question", String.format("문제 %d: %s 관련 문제입니다.", questionNum, keyword));
 
         ArrayNode options = objectMapper.createArrayNode();
-        options.add("선택지 1");
-        options.add("선택지 2 (정답)");
+        options.add("선택지 1 (정답)");
+        options.add("선택지 2");
         options.add("선택지 3");
         options.add("선택지 4");
         options.add("선택지 5");
         question.set("options", options);
 
-        question.put("correctAnswer", 1); // 0-based index
-        question.put("explanation", "AI 파싱 실패로 인한 대체 문제입니다. 실제 서비스에서는 다시 생성해주세요.");
+        question.put("correctAnswer", 0); // 0-based index
+        question.put("explanation", String.format("%s에 대한 기본 문제입니다.", keyword));
         question.put("difficulty", "보통");
         question.put("timeLimit", 30);
-        question.put("hint", "대체 문제입니다.");
+        question.put("hint", "첫 번째 선택지를 확인해보세요.");
         question.put("keyword", keyword);
 
         return question;
+    }
+
+    /**
+     * 모의 문제 생성 (개발/테스트용)
+     */
+    private String generateMockQuestions(List<String> keywords, String context, int questionCount) {
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put("title", "모의 AI 생성 문제");
+            root.put("totalQuestions", questionCount);
+            root.put("keywords", String.join(", ", keywords));
+            root.put("createdAt", LocalDateTime.now().toString());
+            root.put("source", "Mock Generation");
+
+            ArrayNode questionsArray = objectMapper.createArrayNode();
+
+            for (int i = 0; i < questionCount; i++) {
+                String keyword = keywords.isEmpty() ? "일반" : keywords.get(i % keywords.size());
+                ObjectNode question = objectMapper.createObjectNode();
+
+                question.put("id", i + 1);
+                question.put("question", String.format("[모의] %s 관련 문제 %d: 다음 중 올바른 설명은?", keyword, i + 1));
+
+                ArrayNode options = objectMapper.createArrayNode();
+                options.add("첫 번째 선택지 (정답)");
+                options.add("두 번째 선택지");
+                options.add("세 번째 선택지");
+                options.add("네 번째 선택지");
+                options.add("다섯 번째 선택지");
+                question.set("options", options);
+
+                question.put("correctAnswer", 0);
+                question.put("explanation", String.format("이것은 %s에 대한 모의 문제입니다.", keyword));
+                question.put("difficulty", "보통");
+                question.put("timeLimit", 45);
+                question.put("hint", "키워드: " + keyword);
+                question.put("keyword", keyword);
+
+                questionsArray.add(question);
+            }
+
+            root.set("questions", questionsArray);
+            return objectMapper.writeValueAsString(root);
+
+        } catch (Exception e) {
+            log.error("모의 문제 생성 실패", e);
+            throw new RuntimeException("모의 문제 생성 실패: " + e.getMessage());
+        }
     }
 
     /**

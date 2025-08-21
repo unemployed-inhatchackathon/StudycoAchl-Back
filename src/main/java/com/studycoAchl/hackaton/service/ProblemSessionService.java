@@ -5,60 +5,62 @@ import com.studycoAchl.hackaton.dto.SessionStatusResponse;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.Subject;
+import com.studycoAchl.hackaton.entity.User;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
+import com.studycoAchl.hackaton.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
 @Transactional
+@RequiredArgsConstructor
+@Slf4j
 public class ProblemSessionService {
 
-    private static final Logger log = LoggerFactory.getLogger(ProblemSessionService.class);
-
-    @Autowired
-    private ChatSessionRepository chatSessionRepository;
-
-    @Autowired
-    private ProblemRepository problemRepository;
-
-    @Autowired
-    private SubjectRepository subjectRepository;
-
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ChatSessionRepository chatSessionRepository;
+    private final ProblemRepository problemRepository;
+    private final SubjectRepository subjectRepository;
+    private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     /**
      * 문제풀이 세션 생성 (키워드 기반)
      */
-    public Map<String, Object> createProblemSession(String title, String userUuid,
-                                                    String subjectUuid, int questionCount,
+    public Map<String, Object> createProblemSession(String title, UUID userUuid,
+                                                    UUID subjectUuid, int questionCount,
                                                     String difficulty, String category) {
         try {
             log.info("문제풀이 세션 생성 시작 - title: {}, questionCount: {}", title, questionCount);
 
-            // 1. 새로운 채팅 세션 생성
-            String sessionId = UUID.randomUUID().toString();
+            // 1. 사용자와 과목 조회
+            User user = userRepository.findById(userUuid)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
+
+            Subject subject = subjectRepository.findById(subjectUuid)
+                    .orElseThrow(() -> new RuntimeException("과목을 찾을 수 없습니다: " + subjectUuid));
+
+            // 2. 새로운 채팅 세션 생성
             ChatSession chatSession = ChatSession.builder()
-                    .uuid(sessionId)
                     .title(title)
-                    .createdAt(LocalDateTime.now())
+                    .user(user)
+                    .subject(subject)
+                    .createdData(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
                     .status(ChatSession.SessionStatus.ACTIVE)
                     .generatedProblemCount(0)
                     .messages(new ArrayList<>()) // 빈 리스트로 초기화
                     .build();
 
-            // 2. 세션 메타데이터를 extractedKeywords 필드에 임시 저장
+            // 3. 세션 메타데이터를 extractedKeywords 필드에 임시 저장
             Map<String, Object> sessionMetadata = new HashMap<>();
             sessionMetadata.put("status", "WAITING");
             sessionMetadata.put("currentQuestionIndex", 0);
@@ -71,24 +73,24 @@ public class ProblemSessionService {
             String metadataJson = objectMapper.writeValueAsString(sessionMetadata);
             chatSession.setExtractedKeywords(metadataJson);
 
-            // 3. 데이터베이스에 저장
+            // 4. 데이터베이스에 저장
             ChatSession savedSession = chatSessionRepository.save(chatSession);
 
-            // 4. 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
-            Problem problem = createMockProblem(sessionId, userUuid, subjectUuid, questionCount);
+            // 5. 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
+            Problem problem = createMockProblem(savedSession, user, subject, questionCount);
             problemRepository.save(problem);
 
-            // 5. 응답 생성
+            // 6. 응답 생성
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("sessionId", sessionId);
+            result.put("sessionId", savedSession.getUuid());
             result.put("title", title);
             result.put("questionCount", questionCount);
             result.put("difficulty", difficulty);
             result.put("category", category);
             result.put("message", "세션이 성공적으로 생성되었습니다.");
 
-            log.info("문제풀이 세션 생성 완료 - sessionId: {}", sessionId);
+            log.info("문제풀이 세션 생성 완료 - sessionId: {}", savedSession.getUuid());
             return result;
 
         } catch (Exception e) {
@@ -103,7 +105,7 @@ public class ProblemSessionService {
     /**
      * 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
      */
-    private Problem createMockProblem(String sessionId, String userUuid, String subjectUuid, int questionCount) {
+    private Problem createMockProblem(ChatSession chatSession, User user, Subject subject, int questionCount) {
         try {
             // 기존 DB 구조에 맞는 문제 데이터 생성
             Map<String, Object> problemData = new HashMap<>();
@@ -134,14 +136,14 @@ public class ProblemSessionService {
 
             String problemsJson = objectMapper.writeValueAsString(problemData);
 
-            // Problem 엔티티 생성
-            Problem problem = new Problem();
-            problem.setUuid(UUID.randomUUID().toString());
-            problem.setProblems(problemsJson);
-            problem.setUserUuid(userUuid);
-            problem.setSubjectUuid(subjectUuid);
-            problem.setChatSessionUuid(sessionId);
-            problem.setCreatedData(LocalDateTime.now());
+            // Problem 엔티티 생성 (Builder 패턴 사용)
+            Problem problem = Problem.builder()
+                    .problems(problemsJson)
+                    .user(user)
+                    .subject(subject)
+                    .chatSession(chatSession)
+                    .createdData(LocalDateTime.now())
+                    .build();
 
             return problem;
 
@@ -154,25 +156,17 @@ public class ProblemSessionService {
     /**
      * 현재 문제 조회
      */
-    public CurrentQuestionResponse getCurrentQuestion(String sessionId) {
+    public CurrentQuestionResponse getCurrentQuestion(UUID sessionId) {
         log.info("현재 문제 조회 시작 - sessionId: {}", sessionId);
 
         // 1. 채팅 세션 조회
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-        if (!sessionOpt.isPresent()) {
-            log.error("세션을 찾을 수 없음 - sessionId: {}", sessionId);
-            throw new RuntimeException("세션을 찾을 수 없습니다. ID: " + sessionId);
-        }
-
-        ChatSession session = sessionOpt.get();
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
         // 2. 해당 세션의 문제 조회
-        Optional<Problem> problemOpt = problemRepository.findByChatSessionUuid(sessionId);
-        if (!problemOpt.isPresent()) {
-            throw new RuntimeException("세션에 연결된 문제를 찾을 수 없습니다.");
-        }
+        Problem problem = problemRepository.findByChatSession_Uuid(sessionId)
+                .orElseThrow(() -> new RuntimeException("세션에 연결된 문제를 찾을 수 없습니다."));
 
-        Problem problem = problemOpt.get();
         String problemsJson = problem.getProblems();
 
         if (problemsJson == null || problemsJson.isEmpty()) {
@@ -218,12 +212,7 @@ public class ProblemSessionService {
             response.setDifficulty(currentQuestion.path("difficulty").asText("보통"));
 
             // 과목 정보 설정
-            Optional<Subject> subjectOpt = subjectRepository.findById(problem.getSubjectUuid());
-            if (subjectOpt.isPresent()) {
-                response.setCategory(subjectOpt.get().getTitle());
-            } else {
-                response.setCategory("일반");
-            }
+            response.setCategory(problem.getSubject().getTitle());
 
             // 시간 제한과 힌트 정보
             response.setTimeLimit(currentQuestion.path("timeLimit").asInt(30));
@@ -264,21 +253,17 @@ public class ProblemSessionService {
     /**
      * 세션 상태 조회
      */
-    public SessionStatusResponse getSessionStatus(String sessionId) {
+    public SessionStatusResponse getSessionStatus(UUID sessionId) {
         log.info("세션 상태 조회 시작 - sessionId: {}", sessionId);
 
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-        if (!sessionOpt.isPresent()) {
-            throw new RuntimeException("세션을 찾을 수 없습니다.");
-        }
-
-        ChatSession session = sessionOpt.get();
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
         SessionStatusResponse response = new SessionStatusResponse();
-        response.setSessionId(session.getUuid());
+        response.setSessionId(session.getUuid().toString());
 
         // 세션에 연결된 문제 정보 조회
-        Optional<Problem> problemOpt = problemRepository.findByChatSessionUuid(sessionId);
+        Optional<Problem> problemOpt = problemRepository.findByChatSession_Uuid(sessionId);
 
         if (problemOpt.isPresent()) {
             Problem problem = problemOpt.get();
@@ -294,12 +279,7 @@ public class ProblemSessionService {
                 }
 
                 // 과목 정보
-                Optional<Subject> subjectOpt = subjectRepository.findById(problem.getSubjectUuid());
-                if (subjectOpt.isPresent()) {
-                    response.setSubjectTitle(subjectOpt.get().getTitle());
-                } else {
-                    response.setSubjectTitle("일반");
-                }
+                response.setSubjectTitle(problem.getSubject().getTitle());
 
             } catch (Exception e) {
                 log.warn("문제 정보 파싱 실패 - sessionId: {}", sessionId);
@@ -327,7 +307,7 @@ public class ProblemSessionService {
             response.setParticipantCount(1);
         }
 
-        response.setStartedAt(session.getCreatedAt());
+        response.setStartedAt(session.getCreatedData());
 
         // 기본값 설정
         if (response.getTotalQuestions() == 0) {
@@ -343,15 +323,15 @@ public class ProblemSessionService {
     /**
      * 세션 활성 여부 확인
      */
-    public boolean isSessionActive(String sessionId) {
+    public boolean isSessionActive(UUID sessionId) {
         Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-        if (!sessionOpt.isPresent()) {
+        if (sessionOpt.isEmpty()) {
             return false;
         }
 
         // 세션에 연결된 문제가 있는지 확인
-        Optional<Problem> problemOpt = problemRepository.findByChatSessionUuid(sessionId);
-        if (!problemOpt.isPresent()) {
+        Optional<Problem> problemOpt = problemRepository.findByChatSession_Uuid(sessionId);
+        if (problemOpt.isEmpty()) {
             return false;
         }
 
@@ -381,9 +361,9 @@ public class ProblemSessionService {
     /**
      * 참가자 여부 확인
      */
-    public boolean isParticipant(String sessionId, String userId) {
+    public boolean isParticipant(UUID sessionId, UUID userId) {
         Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-        if (!sessionOpt.isPresent()) {
+        if (sessionOpt.isEmpty()) {
             return false;
         }
 
@@ -400,13 +380,10 @@ public class ProblemSessionService {
     /**
      * 세션 메타데이터 업데이트
      */
-    public void updateSessionMetadata(String sessionId, Map<String, Object> updates) {
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-        if (!sessionOpt.isPresent()) {
-            throw new RuntimeException("세션을 찾을 수 없습니다.");
-        }
+    public void updateSessionMetadata(UUID sessionId, Map<String, Object> updates) {
+        ChatSession session = chatSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
-        ChatSession session = sessionOpt.get();
         String metadataJson = session.getExtractedKeywords();
 
         try {
@@ -437,14 +414,11 @@ public class ProblemSessionService {
     /**
      * 다음 문제로 이동
      */
-    public Map<String, Object> moveToNextQuestion(String sessionId) {
+    public Map<String, Object> moveToNextQuestion(UUID sessionId) {
         try {
-            Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
-            if (!sessionOpt.isPresent()) {
-                throw new RuntimeException("세션을 찾을 수 없습니다.");
-            }
+            ChatSession session = chatSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
-            ChatSession session = sessionOpt.get();
             int currentIndex = getCurrentQuestionIndex(session);
 
             // 현재 인덱스를 1 증가
@@ -465,6 +439,39 @@ public class ProblemSessionService {
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
             errorResult.put("message", "다음 문제로 이동에 실패했습니다: " + e.getMessage());
+            return errorResult;
+        }
+    }
+
+    /**
+     * 세션 완료 처리
+     */
+    public Map<String, Object> completeSession(UUID sessionId) {
+        try {
+            ChatSession session = chatSessionRepository.findById(sessionId)
+                    .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
+
+            // 세션 상태를 완료로 변경
+            session.setStatus(ChatSession.SessionStatus.COMPLETED);
+
+            // 메타데이터도 업데이트
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("status", "COMPLETED");
+            updates.put("completedAt", LocalDateTime.now().toString());
+
+            updateSessionMetadata(sessionId, updates);
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("success", true);
+            result.put("message", "세션이 완료되었습니다.");
+            result.put("completedAt", LocalDateTime.now());
+
+            return result;
+        } catch (Exception e) {
+            log.error("세션 완료 처리 실패 - sessionId: {}", sessionId, e);
+            Map<String, Object> errorResult = new HashMap<>();
+            errorResult.put("success", false);
+            errorResult.put("message", "세션 완료 처리에 실패했습니다: " + e.getMessage());
             return errorResult;
         }
     }

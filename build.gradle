@@ -1,41 +1,96 @@
 plugins {
-	id 'java'
-	id 'org.springframework.boot' version '3.5.4'
-	id 'io.spring.dependency-management' version '1.1.7'
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
 }
 
 group = 'com.studycoAchl'
 version = '0.0.1-SNAPSHOT'
 
 java {
-	toolchain {
-		languageVersion = JavaLanguageVersion.of(21)
-	}
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
 }
 
 repositories {
-	mavenCentral()
+    mavenCentral()
 }
 
 dependencies {
+    // === Core Spring Boot Starters ===
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+    // === Security (채팅 인증/인가에 필요) ===
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // === WebSocket (실시간 채팅 기능) ===
+    implementation 'org.springframework.boot:spring-boot-starter-websocket'
+
+    // === Database ===
+    runtimeOnly 'com.mysql:mysql-connector-j:8.2.0'
+    runtimeOnly 'com.h2database:h2'  // 테스트/개발용
+
+    // === AI & OpenAI Integration ===
+    implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
+
+    // === API Documentation ===
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
+
+    // === JSON Processing ===
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+
+    // === Environment Variables ===
+    implementation 'me.paulschwarz:spring-dotenv:3.0.0'
+    implementation 'io.github.cdimascio:dotenv-java:3.0.0'
+
+    // === Lombok ===
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
-	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
-	implementation 'org.springframework.boot:spring-boot-starter-security'
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
-    implementation 'me.paulschwarz:spring-dotenv:3.0.0'
-    implementation 'com.fasterxml.jackson.core:jackson-databind'
-	developmentOnly 'org.springframework.boot:spring-boot-devtools'
-    runtimeOnly 'com.mysql:mysql-connector-j:8.2.0'
+
+    // === Development Tools ===
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    // === Testing ===
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.security:spring-security-test'
-	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.springframework.security:spring-security-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
+// === Task Configuration ===
 tasks.named('test') {
-	useJUnitPlatform()
+    useJUnitPlatform()
+}
+
+// === Build Configuration ===
+tasks.named('bootRun') {
+    // .env 파일이 있으면 자동으로 로드
+    if (file('.env').exists()) {
+        doFirst {
+            file('.env').readLines().each {
+                def (key, value) = it.tokenize('=')
+                if (key && value) {
+                    environment key, value
+                }
+            }
+        }
+    }
+}
+
+// === JAR 설정 ===
+jar {
+    enabled = false  // Plain JAR 비활성화
+}
+
+bootJar {
+    archiveFileName = "${project.name}-${project.version}.jar"
+    manifest {
+        attributes(
+                'Main-Class': 'org.springframework.boot.loader.JarLauncher'
+        )
+    }
 }
