@@ -4,7 +4,6 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 !**/src/main/**/build/
 !**/src/test/**/build/
-.env
 application-local.properties
 **/application-local.properties
 
@@ -38,3 +37,7 @@ out/
 
 ### VS Code ###
 .vscode/
+
+
+.env
+*.env
