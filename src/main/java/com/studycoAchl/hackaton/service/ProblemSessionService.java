@@ -154,17 +154,18 @@ public class ProblemSessionService {
     }
 
     /**
-     * 현재 문제 조회
+     * 현재 문제 조회 - Fetch Join 적용
      */
     public CurrentQuestionResponse getCurrentQuestion(UUID sessionId) {
         log.info("현재 문제 조회 시작 - sessionId: {}", sessionId);
 
-        // 1. 채팅 세션 조회
-        ChatSession session = chatSessionRepository.findById(sessionId)
+        // 1. 모든 관련 엔티티와 함께 채팅 세션 조회
+        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
                 .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다. ID: " + sessionId));
 
-        // 2. 해당 세션의 문제 조회
-        Problem problem = problemRepository.findByChatSession_Uuid(sessionId)
+        // 2. 세션과 연결된 문제 찾기 (이미 fetch join으로 로드됨)
+        Problem problem = session.getProblems().stream()
+                .findFirst()
                 .orElseThrow(() -> new RuntimeException("세션에 연결된 문제를 찾을 수 없습니다."));
 
         String problemsJson = problem.getProblems();
@@ -211,8 +212,8 @@ public class ProblemSessionService {
             response.setTotalQuestions(questionsArray.size());
             response.setDifficulty(currentQuestion.path("difficulty").asText("보통"));
 
-            // 과목 정보 설정
-            response.setCategory(problem.getSubject().getTitle());
+            // 과목 정보 설정 (이미 fetch join으로 로드됨)
+            response.setCategory(session.getSubject().getTitle());
 
             // 시간 제한과 힌트 정보
             response.setTimeLimit(currentQuestion.path("timeLimit").asInt(30));
@@ -251,19 +252,20 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 상태 조회
+     * 세션 상태 조회 - Fetch Join 적용
      */
     public SessionStatusResponse getSessionStatus(UUID sessionId) {
         log.info("세션 상태 조회 시작 - sessionId: {}", sessionId);
 
-        ChatSession session = chatSessionRepository.findById(sessionId)
+        // 모든 관련 엔티티와 함께 세션 조회
+        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
                 .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
         SessionStatusResponse response = new SessionStatusResponse();
         response.setSessionId(session.getUuid().toString());
 
-        // 세션에 연결된 문제 정보 조회
-        Optional<Problem> problemOpt = problemRepository.findByChatSession_Uuid(sessionId);
+        // 세션과 연결된 문제 정보 조회 (이미 fetch join으로 로드됨)
+        Optional<Problem> problemOpt = session.getProblems().stream().findFirst();
 
         if (problemOpt.isPresent()) {
             Problem problem = problemOpt.get();
@@ -278,8 +280,8 @@ public class ProblemSessionService {
                     }
                 }
 
-                // 과목 정보
-                response.setSubjectTitle(problem.getSubject().getTitle());
+                // 과목 정보 (이미 fetch join으로 로드됨)
+                response.setSubjectTitle(session.getSubject().getTitle());
 
             } catch (Exception e) {
                 log.warn("문제 정보 파싱 실패 - sessionId: {}", sessionId);
@@ -321,21 +323,20 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 활성 여부 확인
+     * 세션 활성 여부 확인 - Fetch Join 적용
      */
     public boolean isSessionActive(UUID sessionId) {
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
+        Optional<ChatSession> sessionOpt = chatSessionRepository.findByIdWithAllRelations(sessionId);
         if (sessionOpt.isEmpty()) {
             return false;
         }
 
-        // 세션에 연결된 문제가 있는지 확인
-        Optional<Problem> problemOpt = problemRepository.findByChatSession_Uuid(sessionId);
-        if (problemOpt.isEmpty()) {
+        ChatSession session = sessionOpt.get();
+
+        // 세션에 연결된 문제가 있는지 확인 (이미 fetch join으로 로드됨)
+        if (session.getProblems().isEmpty()) {
             return false;
         }
-
-        ChatSession session = sessionOpt.get();
 
         // 세션 상태 확인
         if (session.getStatus() != ChatSession.SessionStatus.ACTIVE) {
@@ -359,16 +360,16 @@ public class ProblemSessionService {
     }
 
     /**
-     * 참가자 여부 확인
+     * 참가자 여부 확인 - Fetch Join 적용
      */
     public boolean isParticipant(UUID sessionId, UUID userId) {
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findById(sessionId);
+        Optional<ChatSession> sessionOpt = chatSessionRepository.findByIdWithAllRelations(sessionId);
         if (sessionOpt.isEmpty()) {
             return false;
         }
 
         ChatSession session = sessionOpt.get();
-        // User 관계를 통해 세션 소유자 확인
+        // User 관계를 통해 세션 소유자 확인 (이미 fetch join으로 로드됨)
         if (session.getUser() != null) {
             return session.getUser().getUuid().equals(userId);
         }
@@ -378,10 +379,10 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 메타데이터 업데이트
+     * 세션 메타데이터 업데이트 - Fetch Join 적용
      */
     public void updateSessionMetadata(UUID sessionId, Map<String, Object> updates) {
-        ChatSession session = chatSessionRepository.findById(sessionId)
+        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
                 .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
         String metadataJson = session.getExtractedKeywords();
@@ -412,11 +413,11 @@ public class ProblemSessionService {
     }
 
     /**
-     * 다음 문제로 이동
+     * 다음 문제로 이동 - Fetch Join 적용
      */
     public Map<String, Object> moveToNextQuestion(UUID sessionId) {
         try {
-            ChatSession session = chatSessionRepository.findById(sessionId)
+            ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
                     .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
             int currentIndex = getCurrentQuestionIndex(session);
@@ -444,11 +445,11 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 완료 처리
+     * 세션 완료 처리 - Fetch Join 적용
      */
     public Map<String, Object> completeSession(UUID sessionId) {
         try {
-            ChatSession session = chatSessionRepository.findById(sessionId)
+            ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
                     .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
 
             // 세션 상태를 완료로 변경

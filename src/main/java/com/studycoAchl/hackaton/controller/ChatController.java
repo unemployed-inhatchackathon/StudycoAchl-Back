@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,55 @@ public class ChatController {
 
     private final ChatSessionService chatSessionService;
     private final AiService aiService;
+    // KeywordExtractionService 제거 - 직접 AiService 사용
+
+    // === 교육적 내용 판단 헬퍼 메소드 ===
+    private boolean isEducationalContent(String content) {
+        if (content == null || content.trim().length() < 5) {
+            return false;
+        }
+
+        // 교육 관련 키워드 체크
+        String[] educationalKeywords = {
+                "배우", "공부", "알고싶", "설명", "이해", "방법", "어떻게", "무엇", "왜",
+                "함수", "방정식", "공식", "계산", "문제", "풀이", "해결", "개념", "정의",
+                "수학", "과학", "영어", "문법", "단어", "이론", "원리", "법칙"
+        };
+
+        String lowerContent = content.toLowerCase();
+        for (String keyword : educationalKeywords) {
+            if (lowerContent.contains(keyword)) {
+                return true;
+            }
+        }
+
+        // 질문 형태 체크
+        return content.contains("?") || content.contains("？");
+    }
+
+    // === 키워드 추출 및 저장 헬퍼 메소드 ===
+    private void extractAndSaveKeywords(UUID sessionUuid, String content, String subjectName) {
+        try {
+            // AiService를 직접 사용해서 키워드 추출
+            String extractedKeywords = aiService.extractKeywords(content, subjectName);
+
+            if (extractedKeywords != null && !extractedKeywords.trim().isEmpty()) {
+                // 쉼표로 분할하고 정제
+                String[] keywordArray = extractedKeywords.split(",");
+
+                for (String keyword : keywordArray) {
+                    String cleanKeyword = keyword.trim();
+                    if (cleanKeyword.length() >= 2 && cleanKeyword.length() <= 20) {
+                        chatSessionService.addExtractedKeyword(sessionUuid, cleanKeyword);
+                    }
+                }
+
+                log.debug("키워드 추출 완료 - sessionUuid: {}, keywords: {}", sessionUuid, extractedKeywords);
+            }
+        } catch (Exception e) {
+            log.warn("키워드 추출 중 오류 - sessionUuid: {}", sessionUuid, e);
+        }
+    }
 
     /**
      * 사용자별 채팅 세션 목록 조회
@@ -61,6 +111,7 @@ public class ChatController {
      * 채팅 세션 상세 조회
      */
     @GetMapping("/sessions/{sessionUuid}")
+    @Transactional(readOnly = true) // 읽기 전용 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> getSessionDetail(@PathVariable UUID sessionUuid) {
         try {
             ChatSession session = chatSessionService.findById(sessionUuid);
@@ -72,9 +123,10 @@ public class ChatController {
     }
 
     /**
-     * 메시지 전송 및 AI 응답 생성
+     * 메시지 전송 및 AI 응답 생성 - 자동 키워드 추출 추가
      */
     @PostMapping("/sessions/{sessionUuid}/messages")
+    @Transactional // 🎯 이것이 핵심! 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> addMessage(
             @PathVariable UUID sessionUuid,
             @RequestBody MessageRequest messageRequest) {
@@ -82,12 +134,14 @@ public class ChatController {
         try {
             ChatSession session = chatSessionService.findById(sessionUuid);
 
-            // 1. 사용자 메시지 추가
+            // 1. 사용자 메시지 추가 (교육적 내용 판단)
+            boolean isEducational = isEducationalContent(messageRequest.getContent());
             ChatMessage userMessage = new ChatMessage(
                     UUID.randomUUID().toString(),
                     messageRequest.getSender(),
                     messageRequest.getContent(),
-                    LocalDateTime.now()
+                    LocalDateTime.now(),
+                    isEducational
             );
 
             session.addMessage(messageRequest.getSender(), messageRequest.getContent());
@@ -100,10 +154,26 @@ public class ChatController {
                     // AI 응답 생성
                     String aiResponse = aiService.generateResponse(messageRequest.getContent(), subjectName);
 
-                    // AI 메시지 추가
+                    // AI 메시지 추가 (AI 응답도 교육적 내용으로 간주)
                     session.addMessage("AI", aiResponse);
 
                     log.info("AI 응답 생성 완료 - sessionUuid: {}", sessionUuid);
+
+                    // 🔥 3. 자동 키워드 추출 (사용자 메시지와 AI 응답 모두 분석)
+                    if (isEducational) {
+                        try {
+                            // 사용자 메시지에서 키워드 추출
+                            extractAndSaveKeywords(sessionUuid, messageRequest.getContent(), subjectName);
+
+                            // AI 응답에서도 키워드 추출
+                            extractAndSaveKeywords(sessionUuid, aiResponse, subjectName);
+
+                            log.info("자동 키워드 추출 완료 - sessionUuid: {}", sessionUuid);
+                        } catch (Exception keywordError) {
+                            log.warn("키워드 추출 실패 (계속 진행) - sessionUuid: {}", sessionUuid, keywordError);
+                            // 키워드 추출 실패해도 채팅은 계속 진행
+                        }
+                    }
 
                 } catch (Exception e) {
                     log.error("AI 응답 생성 실패 - sessionUuid: {}", sessionUuid, e);
@@ -125,6 +195,7 @@ public class ChatController {
      * 세션 제목 수정
      */
     @PutMapping("/sessions/{sessionUuid}/title")
+    @Transactional // 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> updateSessionTitle(
             @PathVariable UUID sessionUuid,
             @RequestBody Map<String, String> request) {
@@ -161,6 +232,7 @@ public class ChatController {
      * 과목별 세션 조회
      */
     @GetMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions")
+    @Transactional(readOnly = true) // 읽기 전용 트랜잭션 추가
     public ResponseEntity<ApiResponse<List<ChatSession>>> getSessionsBySubject(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid) {

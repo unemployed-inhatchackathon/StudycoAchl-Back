@@ -65,7 +65,7 @@ public class ChatSessionService {
     // ========== 조회 메소드들 ==========
 
     public ChatSession findById(UUID sessionUuid) {
-        return chatSessionRepository.findById(sessionUuid)
+        return chatSessionRepository.findByIdWithAllRelations(sessionUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 채팅 세션입니다."));
     }
 
