@@ -398,6 +398,7 @@ public class ProblemSessionService {
     /**
      * 세션 메타데이터 업데이트 - problemUuid 기반으로 변경
      */
+    // 1. ProblemSessionService.java - updateSessionMetadata 메소드
     public void updateSessionMetadata(UUID problemUuid, Map<String, Object> updates) {
         Problem problem = problemRepository.findById(problemUuid)
                 .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
@@ -410,11 +411,14 @@ public class ProblemSessionService {
         String metadataJson = session.getExtractedKeywords();
 
         try {
+            @SuppressWarnings("unchecked")  // 제네릭 타입 경고 해결
             Map<String, Object> existingData = new HashMap<>();
 
             if (metadataJson != null && !metadataJson.isEmpty()) {
                 JsonNode metadataNode = objectMapper.readTree(metadataJson);
-                existingData = objectMapper.convertValue(metadataNode, Map.class);
+                existingData = objectMapper.convertValue(metadataNode,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
+                );
             }
 
             // 업데이트할 데이터 병합

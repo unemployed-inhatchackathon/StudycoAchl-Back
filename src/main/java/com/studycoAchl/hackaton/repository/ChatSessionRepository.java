@@ -13,34 +13,31 @@ import java.util.UUID;
 @Repository
 public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> {
 
-    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
+    // ========== 기본 조회 메소드들 (Service와 이름 맞춤) ==========
 
-    List<ChatSession> findByUserUuid(UUID userUuid);
-    List<ChatSession> findBySubjectUuid(UUID subjectUuid);
-    List<ChatSession> findByUserUuidAndSubjectUuid(UUID userUuid, UUID subjectUuid);
+    // Service에서 사용하는 메소드명과 일치하도록 수정
+    List<ChatSession> findByUser_Uuid(UUID userUuid);
+    List<ChatSession> findBySubject_Uuid(UUID subjectUuid);
+    List<ChatSession> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
 
     // 제목 기반 검색
-    @SuppressWarnings("unused")
     List<ChatSession> findByTitleContaining(String title);
 
     // 상태 기반 조회
-    @SuppressWarnings("unused")
     List<ChatSession> findByStatus(ChatSession.SessionStatus status);
-    List<ChatSession> findByUserUuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);
+    List<ChatSession> findByUser_UuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);
 
     // 시간 기반 정렬
-    List<ChatSession> findByUserUuidOrderByCreatedDataDesc(UUID userUuid);
+    List<ChatSession> findByUser_UuidOrderByCreatedDataDesc(UUID userUuid);
 
     // ========== 키워드 및 문제 생성 관련 (@Query 사용) ==========
 
     // 키워드가 추출된 세션들
     @Query("SELECT cs FROM ChatSession cs WHERE cs.extractedKeywords IS NOT NULL AND cs.extractedKeywords != ''")
-    @SuppressWarnings("unused")
     List<ChatSession> findSessionsWithKeywords();
 
     // 키워드로 세션 검색
     @Query("SELECT cs FROM ChatSession cs WHERE cs.extractedKeywords LIKE %:keyword%")
-    @SuppressWarnings("unused")
     List<ChatSession> findByExtractedKeywordsContaining(@Param("keyword") String keyword);
 
     // 문제가 생성된 세션들
@@ -48,8 +45,7 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     List<ChatSession> findSessionsWithProblems();
 
     // 사용자별 문제 생성된 세션들
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.userUuid = :userUuid AND cs.generatedProblemCount > 0")
-    @SuppressWarnings("unused")
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.generatedProblemCount > 0")
     List<ChatSession> findSessionsWithProblemsByUser(@Param("userUuid") UUID userUuid);
 
     @Query("SELECT cs FROM ChatSession cs " +

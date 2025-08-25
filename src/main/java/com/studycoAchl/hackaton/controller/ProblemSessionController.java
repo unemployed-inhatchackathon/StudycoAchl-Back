@@ -221,7 +221,7 @@ public class ProblemSessionController {
             @PathVariable UUID problemUuid,
             @RequestParam int questionNumber,
             @RequestParam int selectedAnswer,
-            @RequestParam(required = false) UUID userId) {
+            @RequestParam(required = false) UUID userId) {  // 매개변수 이름 수정
 
         try {
             log.info("답안 제출 - problemUuid: {}, questionNumber: {}, selectedAnswer: {}",
@@ -372,7 +372,7 @@ public class ProblemSessionController {
             Map<String, Object> status = Map.of(
                     "status", "정상",
                     "service", "AI 문제풀이 시스템",
-                    "features", Arrays.asList(
+                    "features", List.of(  // Arrays.asList() 대신 List.of() 사용
                             "채팅 기반 AI 문제 생성",
                             "키워드 기반 문제 생성",
                             "실시간 문제 조회",

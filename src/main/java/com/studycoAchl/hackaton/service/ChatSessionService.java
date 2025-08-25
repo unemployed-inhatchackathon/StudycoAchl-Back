@@ -72,21 +72,19 @@ public class ChatSessionService {
     }
 
     public List<ChatSession> findByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_Uuid(userUuid);
+        return chatSessionRepository.findByUser_Uuid(userUuid);  // 원래대로 복구
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public List<ChatSession> findBySubject(UUID subjectUuid) {
-        return chatSessionRepository.findBySubject_Uuid(subjectUuid);
+        return chatSessionRepository.findBySubject_Uuid(subjectUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findByUserAndSubject(UUID userUuid, UUID subjectUuid) {
-        return chatSessionRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);
+        return chatSessionRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);  // 원래대로 복구
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public List<ChatSession> findActiveSessionsByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);
+        return chatSessionRepository.findByUser_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);  // 원래대로 복구
     }
 
     // ========== 키워드 관련 기능 (통합 기능) ==========
@@ -104,13 +102,11 @@ public class ChatSessionService {
         chatSessionRepository.save(session);
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public List<String> getExtractedKeywords(UUID sessionUuid) {
         ChatSession session = findById(sessionUuid);
         return session.getExtractedKeywordsList();
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public boolean canGenerateProblems(UUID sessionUuid) {
         ChatSession session = findById(sessionUuid);
         return session.canGenerateProblems();
@@ -124,12 +120,10 @@ public class ChatSessionService {
         return chatSessionRepository.save(session);
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public ChatSession completeSession(UUID sessionUuid) {
         return updateSessionStatus(sessionUuid, ChatSession.SessionStatus.COMPLETED);
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public ChatSession pauseSession(UUID sessionUuid) {
         return updateSessionStatus(sessionUuid, ChatSession.SessionStatus.PAUSED);
     }
@@ -142,7 +136,6 @@ public class ChatSessionService {
         chatSessionRepository.save(session);
     }
 
-    @SuppressWarnings("unused") // IDE 경고 해결
     public List<ChatSession> findSessionsWithProblems() {
         return chatSessionRepository.findSessionsWithProblems();
     }
