@@ -42,4 +42,4 @@ out/
 src/main/resources/application.properties*
 .env
 *.env
-src/main/resources/application.properties
+src/main/resources/application.propertiessrc/main/resources/application.properties*
