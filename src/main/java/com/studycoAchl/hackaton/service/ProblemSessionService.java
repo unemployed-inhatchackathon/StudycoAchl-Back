@@ -235,22 +235,11 @@ public class ProblemSessionService {
     }
 
     /**
-     * 현재 문제 인덱스 조회 (extractedKeywords에서 메타데이터 파싱)
+     * 수정된 getCurrentQuestionIndex - 안전한 파싱 사용
      */
     private int getCurrentQuestionIndex(ChatSession session) {
-        String metadataJson = session.getExtractedKeywords();
-
-        if (metadataJson == null || metadataJson.isEmpty()) {
-            return 0; // 기본값: 첫 번째 문제
-        }
-
-        try {
-            JsonNode metadataNode = objectMapper.readTree(metadataJson);
-            return metadataNode.path("currentQuestionIndex").asInt(0);
-        } catch (Exception e) {
-            log.warn("현재 문제 인덱스 파싱 실패, 기본값 사용 - sessionId: {}", session.getUuid());
-            return 0;
-        }
+        Map<String, Object> metadata = safeParseExtractedKeywords(session.getExtractedKeywords());
+        return ((Number) metadata.getOrDefault("currentQuestionIndex", 0)).intValue();
     }
 
     /**
@@ -396,9 +385,56 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 메타데이터 업데이트 - problemUuid 기반으로 변경
+     * 안전한 JSON 파싱 유틸리티 메소드
      */
-    // 1. ProblemSessionService.java - updateSessionMetadata 메소드
+    private boolean isValidJson(String jsonString) {
+        if (jsonString == null || jsonString.trim().isEmpty()) {
+            return false;
+        }
+
+        String trimmed = jsonString.trim();
+        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+                (trimmed.startsWith("[") && trimmed.endsWith("]"));
+    }
+
+    /**
+     * extractedKeywords 필드를 안전하게 JSON으로 변환
+     */
+    private Map<String, Object> safeParseExtractedKeywords(String extractedKeywords) {
+        Map<String, Object> result = new HashMap<>();
+
+        if (extractedKeywords == null || extractedKeywords.isEmpty()) {
+            return result;
+        }
+
+        try {
+            if (isValidJson(extractedKeywords)) {
+                // 이미 JSON 형태인 경우
+                JsonNode node = objectMapper.readTree(extractedKeywords);
+                return objectMapper.convertValue(node,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
+                );
+            } else {
+                // 순수 텍스트 (키워드)인 경우
+                result.put("originalKeywords", extractedKeywords);
+                result.put("currentQuestionIndex", 0);
+                result.put("status", "WAITING");
+                result.put("participantCount", 1);
+                return result;
+            }
+        } catch (Exception e) {
+            log.warn("JSON 파싱 실패, 기본값 반환 - content: {}", extractedKeywords, e);
+            result.put("originalKeywords", extractedKeywords);
+            result.put("currentQuestionIndex", 0);
+            result.put("status", "WAITING");
+            result.put("participantCount", 1);
+            return result;
+        }
+    }
+
+    /**
+     * 수정된 updateSessionMetadata - 안전한 파싱 사용
+     */
     public void updateSessionMetadata(UUID problemUuid, Map<String, Object> updates) {
         Problem problem = problemRepository.findById(problemUuid)
                 .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
@@ -408,23 +444,14 @@ public class ProblemSessionService {
             throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
         }
 
-        String metadataJson = session.getExtractedKeywords();
-
         try {
-            @SuppressWarnings("unchecked")  // 제네릭 타입 경고 해결
-            Map<String, Object> existingData = new HashMap<>();
-
-            if (metadataJson != null && !metadataJson.isEmpty()) {
-                JsonNode metadataNode = objectMapper.readTree(metadataJson);
-                existingData = objectMapper.convertValue(metadataNode,
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
-                );
-            }
+            // 안전한 파싱으로 기존 데이터 가져오기
+            Map<String, Object> existingData = safeParseExtractedKeywords(session.getExtractedKeywords());
 
             // 업데이트할 데이터 병합
             existingData.putAll(updates);
 
-            // 다시 JSON으로 변환하여 저장
+            // JSON으로 변환하여 저장
             String updatedContent = objectMapper.writeValueAsString(existingData);
             session.setExtractedKeywords(updatedContent);
             session.setUpdatedAt(LocalDateTime.now());
