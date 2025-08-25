@@ -91,7 +91,7 @@ public class ChatController {
     /**
      * 채팅 세션 생성
      */
-    @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions")
+    @PostMapping(value = "/users/{userUuid}/subjects/{subjectUuid}/sessions", consumes = "text/plain")
     public ResponseEntity<ApiResponse<ChatSession>> createSession(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid,
@@ -110,7 +110,7 @@ public class ChatController {
     /**
      * 채팅 세션 상세 조회
      */
-    @GetMapping("/sessions/{sessionUuid}")
+    @GetMapping("/sessions/detail/{sessionUuid}")
     @Transactional(readOnly = true) // 읽기 전용 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> getSessionDetail(@PathVariable UUID sessionUuid) {
         try {
@@ -125,7 +125,7 @@ public class ChatController {
     /**
      * 메시지 전송 및 AI 응답 생성 - 자동 키워드 추출 추가
      */
-    @PostMapping("/sessions/{sessionUuid}/messages")
+    @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions/{sessionUuid}/messages")
     @Transactional // 🎯 이것이 핵심! 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> addMessage(
             @PathVariable UUID sessionUuid,
@@ -194,7 +194,7 @@ public class ChatController {
     /**
      * 세션 제목 수정
      */
-    @PutMapping("/sessions/{sessionUuid}/title")
+    @PutMapping("/sessions/{sessionUuid}")
     @Transactional // 트랜잭션 추가
     public ResponseEntity<ApiResponse<ChatSession>> updateSessionTitle(
             @PathVariable UUID sessionUuid,

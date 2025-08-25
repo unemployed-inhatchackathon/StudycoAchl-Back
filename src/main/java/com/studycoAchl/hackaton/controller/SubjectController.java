@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/subjects")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
 public class SubjectController {
@@ -25,7 +25,7 @@ public class SubjectController {
     /**
      * 과목 생성
      */
-    @PostMapping("/users/{userUuid}")
+    @PostMapping("/users/{userUuid}/subjects")
     public ResponseEntity<ApiResponse<Subject>> createSubject(
             @PathVariable UUID userUuid,
             @RequestBody String title) {
@@ -44,7 +44,7 @@ public class SubjectController {
     /**
      * 사용자별 과목 목록 조회
      */
-    @GetMapping("/users/{userUuid}")
+    @GetMapping("/users/{userUuid}subjects")
     public ResponseEntity<ApiResponse<List<Subject>>> getUserSubjects(@PathVariable UUID userUuid) {
         try {
             List<Subject> subjects = subjectService.getUserSubjects(userUuid);
