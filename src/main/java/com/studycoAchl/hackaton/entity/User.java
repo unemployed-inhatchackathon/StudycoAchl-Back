@@ -1,5 +1,6 @@
 package com.studycoAchl.hackaton.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -41,14 +42,18 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // 관계 매핑 (당신 구조 유지)
+    // ========== 관계 매핑 (순환참조 방지 처리) ==========
+
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore  // 순환참조 방지
     private List<Subject> subjects;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore  // 순환참조 방지:
     private List<ChatSession> chatSessions;
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore  // 순환참조 방지
     private List<Problem> problems;
 
     @PrePersist

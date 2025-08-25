@@ -14,6 +14,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -130,85 +131,105 @@ public class ProblemSessionController {
         }
     }
 
+    // ========== 변경된 URL 구조 - problemUuid 기반 ==========
+
     /**
-     * 세션의 현재 문제 조회
+     * 현재 문제 조회 - problemUuid 기반으로 변경
      */
-    @GetMapping("/{sessionId}/current")
+    @GetMapping("/problem/{problemUuid}/current")
     public ResponseEntity<ApiResponse<CurrentQuestionResponse>> getCurrentQuestion(
-            @PathVariable UUID sessionId) {
+            @PathVariable UUID problemUuid) {
 
         try {
-            log.info("현재 문제 조회 요청 - sessionId: {}", sessionId);
+            log.info("현재 문제 조회 요청 - problemUuid: {}", problemUuid);
 
-            CurrentQuestionResponse response = sessionService.getCurrentQuestion(sessionId);
+            CurrentQuestionResponse response = sessionService.getCurrentQuestion(problemUuid);
 
             log.info("현재 문제 조회 성공 - questionId: {}", response.getQuestionId());
 
             return ResponseEntity.ok(ApiResponse.success(response, "현재 문제를 성공적으로 가져왔습니다."));
 
         } catch (Exception e) {
-            log.error("현재 문제 조회 실패 - sessionId: {}", sessionId, e);
+            log.error("현재 문제 조회 실패 - problemUuid: {}", problemUuid, e);
             return ResponseEntity.ok(ApiResponse.error("문제 조회 실패: " + e.getMessage()));
         }
     }
 
     /**
-     * 세션 상태 조회
+     * 세션 상태 조회 - problemUuid 기반으로 변경
      */
-    @GetMapping("/{sessionId}/status")
+    @GetMapping("/problem/{problemUuid}/status")
     public ResponseEntity<ApiResponse<SessionStatusResponse>> getSessionStatus(
-            @PathVariable UUID sessionId) {
+            @PathVariable UUID problemUuid) {
 
         try {
-            log.info("세션 상태 조회 요청 - sessionId: {}", sessionId);
+            log.info("세션 상태 조회 요청 - problemUuid: {}", problemUuid);
 
-            SessionStatusResponse response = sessionService.getSessionStatus(sessionId);
+            SessionStatusResponse response = sessionService.getSessionStatus(problemUuid);
 
             return ResponseEntity.ok(ApiResponse.success(response, "세션 상태를 성공적으로 가져왔습니다."));
 
         } catch (Exception e) {
-            log.error("세션 상태 조회 실패 - sessionId: {}", sessionId, e);
+            log.error("세션 상태 조회 실패 - problemUuid: {}", problemUuid, e);
             return ResponseEntity.ok(ApiResponse.error("세션 상태 조회 실패: " + e.getMessage()));
         }
     }
 
     /**
-     * 다음 문제로 이동
+     * 다음 문제로 이동 - problemUuid 기반 (기존 구현 유지)
      */
-    @PostMapping("/{sessionId}/next")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> nextQuestion(
-            @PathVariable UUID sessionId) {
+    @PostMapping("/problem/{problemUuid}/next")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> nextQuestion(@PathVariable UUID problemUuid) {
 
         try {
-            log.info("다음 문제 요청 - sessionId: {}", sessionId);
+            log.info("다음 문제 요청 - problemUuid: {}", problemUuid);
 
-            Map<String, Object> result = sessionService.moveToNextQuestion(sessionId);
+            Map<String, Object> result = sessionService.moveToNextQuestion(problemUuid);
 
             return ResponseEntity.ok(ApiResponse.success(result, "다음 문제로 이동했습니다."));
 
         } catch (Exception e) {
-            log.error("다음 문제 이동 실패 - sessionId: {}", sessionId, e);
+            log.error("다음 문제 이동 실패 - problemUuid: {}", problemUuid, e);
             return ResponseEntity.ok(ApiResponse.error("다음 문제 이동 실패: " + e.getMessage()));
         }
     }
 
     /**
-     * 답안 제출 및 채점
+     * 이전 문제로 이동 - problemUuid 기반
      */
-    @PostMapping("/{sessionId}/submit")
+    @PostMapping("/problem/{problemUuid}/previous")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> previousQuestion(@PathVariable UUID problemUuid) {
+
+        try {
+            log.info("이전 문제 요청 - problemUuid: {}", problemUuid);
+
+            Map<String, Object> result = sessionService.moveToPreviousQuestion(problemUuid);
+
+            return ResponseEntity.ok(ApiResponse.success(result, "이전 문제로 이동했습니다."));
+
+        } catch (Exception e) {
+            log.error("이전 문제 이동 실패 - problemUuid: {}", problemUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("이전 문제 이동 실패: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 답안 제출 및 채점 - problemUuid 기반으로 변경
+     */
+    @PostMapping("/problem/{problemUuid}/submit")
     public ResponseEntity<ApiResponse<Map<String, Object>>> submitAnswer(
-            @PathVariable UUID sessionId,
+            @PathVariable UUID problemUuid,
             @RequestParam int questionNumber,
             @RequestParam int selectedAnswer,
             @RequestParam(required = false) UUID userId) {
 
         try {
-            log.info("답안 제출 - sessionId: {}, questionNumber: {}, selectedAnswer: {}",
-                    sessionId, questionNumber, selectedAnswer);
+            log.info("답안 제출 - problemUuid: {}, questionNumber: {}, selectedAnswer: {}",
+                    problemUuid, questionNumber, selectedAnswer);
 
             Map<String, Object> result = Map.of(
                     "success", true,
-                    "sessionId", sessionId.toString(),
+                    "problemUuid", problemUuid.toString(),
                     "questionNumber", questionNumber,
                     "selectedAnswer", selectedAnswer,
                     "message", "답안이 제출되었습니다. (채점 로직 구현 필요)"
@@ -217,34 +238,130 @@ public class ProblemSessionController {
             return ResponseEntity.ok(ApiResponse.success(result, "답안이 성공적으로 제출되었습니다."));
 
         } catch (Exception e) {
-            log.error("답안 제출 실패 - sessionId: {}", sessionId, e);
+            log.error("답안 제출 실패 - problemUuid: {}", problemUuid, e);
             return ResponseEntity.ok(ApiResponse.error("답안 제출 실패: " + e.getMessage()));
         }
     }
 
     /**
-     * 문제 세트 전체 조회
+     * 문제 세트 전체 조회 - problemUuid 기반으로 변경
      */
-    @GetMapping("/{sessionId}/all-questions")
+    @GetMapping("/problem/{problemUuid}/all-questions")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getAllQuestions(
-            @PathVariable UUID sessionId) {
+            @PathVariable UUID problemUuid) {
 
         try {
-            log.info("전체 문제 조회 요청 - sessionId: {}", sessionId);
+            log.info("전체 문제 조회 요청 - problemUuid: {}", problemUuid);
 
             Map<String, Object> result = Map.of(
                     "success", true,
-                    "sessionId", sessionId.toString(),
+                    "problemUuid", problemUuid.toString(),
                     "message", "전체 문제 조회 기능 구현 필요"
             );
 
             return ResponseEntity.ok(ApiResponse.success(result));
 
         } catch (Exception e) {
-            log.error("전체 문제 조회 실패 - sessionId: {}", sessionId, e);
+            log.error("전체 문제 조회 실패 - problemUuid: {}", problemUuid, e);
             return ResponseEntity.ok(ApiResponse.error("전체 문제 조회 실패: " + e.getMessage()));
         }
     }
+
+    // ========== 새로 추가된 API 엔드포인트들 ==========
+
+    /**
+     * 채팅 세션의 모든 문제 세트 조회
+     */
+    @GetMapping("/chat-session/{chatSessionUuid}/problems")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getProblemsForChatSession(
+            @PathVariable UUID chatSessionUuid) {
+
+        try {
+            log.info("채팅 세션의 문제 세트 조회 - chatSessionUuid: {}", chatSessionUuid);
+
+            List<Problem> problems = sessionService.getProblemsForChatSession(chatSessionUuid);
+
+            List<Map<String, Object>> problemSummaries = problems.stream()
+                    .map(problem -> sessionService.getProblemSummary(problem.getUuid()))
+                    .toList();
+
+            return ResponseEntity.ok(ApiResponse.success(problemSummaries,
+                    "채팅 세션의 문제 세트 목록을 조회했습니다."));
+
+        } catch (Exception e) {
+            log.error("채팅 세션의 문제 세트 조회 실패 - chatSessionUuid: {}", chatSessionUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("문제 세트 조회 실패: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 문제 세트 요약 정보 조회
+     */
+    @GetMapping("/problem/{problemUuid}/summary")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getProblemSummary(
+            @PathVariable UUID problemUuid) {
+
+        try {
+            log.info("문제 세트 요약 정보 조회 - problemUuid: {}", problemUuid);
+
+            Map<String, Object> summary = sessionService.getProblemSummary(problemUuid);
+
+            return ResponseEntity.ok(ApiResponse.success(summary, "문제 세트 요약 정보를 조회했습니다."));
+
+        } catch (Exception e) {
+            log.error("문제 세트 요약 정보 조회 실패 - problemUuid: {}", problemUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("요약 정보 조회 실패: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 문제 세션 완료 처리 - problemUuid 기반으로 변경
+     */
+    @PostMapping("/problem/{problemUuid}/complete")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> completeSession(
+            @PathVariable UUID problemUuid) {
+
+        try {
+            log.info("문제 세션 완료 처리 - problemUuid: {}", problemUuid);
+
+            Map<String, Object> result = sessionService.completeSession(problemUuid);
+
+            return ResponseEntity.ok(ApiResponse.success(result, "문제 세션이 완료되었습니다."));
+
+        } catch (Exception e) {
+            log.error("문제 세션 완료 처리 실패 - problemUuid: {}", problemUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("세션 완료 처리 실패: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 문제 세션 활성 상태 확인
+     */
+    @GetMapping("/problem/{problemUuid}/active")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> checkSessionActive(
+            @PathVariable UUID problemUuid) {
+
+        try {
+            log.info("문제 세션 활성 상태 확인 - problemUuid: {}", problemUuid);
+
+            boolean isActive = sessionService.isSessionActive(problemUuid);
+
+            Map<String, Object> result = Map.of(
+                    "problemUuid", problemUuid,
+                    "isActive", isActive,
+                    "status", isActive ? "ACTIVE" : "INACTIVE"
+            );
+
+            return ResponseEntity.ok(ApiResponse.success(result,
+                    "세션 활성 상태: " + (isActive ? "활성" : "비활성")));
+
+        } catch (Exception e) {
+            log.error("세션 활성 상태 확인 실패 - problemUuid: {}", problemUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("활성 상태 확인 실패: " + e.getMessage()));
+        }
+    }
+
+    // ========== 기존 유틸리티 API들 ==========
 
     /**
      * 시스템 상태 확인
@@ -261,7 +378,8 @@ public class ProblemSessionController {
                             "실시간 문제 조회",
                             "답안 제출 및 채점"
                     ),
-                    "aiModel", "OpenAI GPT-3.5-turbo"
+                    "aiModel", "OpenAI GPT-3.5-turbo",
+                    "apiStructure", "problemUuid 기반"
             );
 
             return ResponseEntity.ok(ApiResponse.success(status, "AI 문제풀이 시스템 정상 작동!"));

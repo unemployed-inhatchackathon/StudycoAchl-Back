@@ -154,22 +154,22 @@ public class ProblemSessionService {
     }
 
     /**
-     * 현재 문제 조회 - Fetch Join 적용
+     * 현재 문제 조회 - problemUuid 기반으로 변경
      */
-    public CurrentQuestionResponse getCurrentQuestion(UUID sessionId) {
-        log.info("현재 문제 조회 시작 - sessionId: {}", sessionId);
+    public CurrentQuestionResponse getCurrentQuestion(UUID problemUuid) {
+        log.info("현재 문제 조회 시작 - problemUuid: {}", problemUuid);
 
-        // 1. 모든 관련 엔티티와 함께 채팅 세션 조회
-        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
-                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다. ID: " + sessionId));
+        // 1. problemUuid로 직접 Problem 조회
+        Problem problem = problemRepository.findById(problemUuid)
+                .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다. ID: " + problemUuid));
 
-        // 2. 세션과 연결된 문제 찾기 (이미 fetch join으로 로드됨)
-        Problem problem = session.getProblems().stream()
-                .findFirst()
-                .orElseThrow(() -> new RuntimeException("세션에 연결된 문제를 찾을 수 없습니다."));
+        // 2. Problem과 연결된 ChatSession 조회
+        ChatSession session = problem.getChatSession();
+        if (session == null) {
+            throw new RuntimeException("문제에 연결된 채팅 세션을 찾을 수 없습니다.");
+        }
 
         String problemsJson = problem.getProblems();
-
         if (problemsJson == null || problemsJson.isEmpty()) {
             throw new RuntimeException("문제 데이터가 없습니다.");
         }
@@ -178,7 +178,7 @@ public class ProblemSessionService {
             // 3. JSON에서 문제 데이터 파싱
             JsonNode problemsNode = objectMapper.readTree(problemsJson);
 
-            // 현재 문제 인덱스 가져오기
+            // 현재 문제 인덱스 가져오기 (ChatSession의 메타데이터에서)
             int currentQuestionIndex = getCurrentQuestionIndex(session);
 
             // 문제 배열에서 현재 문제 선택
@@ -212,8 +212,10 @@ public class ProblemSessionService {
             response.setTotalQuestions(questionsArray.size());
             response.setDifficulty(currentQuestion.path("difficulty").asText("보통"));
 
-            // 과목 정보 설정 (이미 fetch join으로 로드됨)
-            response.setCategory(session.getSubject().getTitle());
+            // 과목 정보 설정 (Subject 관계를 통해)
+            if (problem.getSubject() != null) {
+                response.setCategory(problem.getSubject().getTitle());
+            }
 
             // 시간 제한과 힌트 정보
             response.setTimeLimit(currentQuestion.path("timeLimit").asInt(30));
@@ -221,13 +223,13 @@ public class ProblemSessionService {
             response.setHasHint(currentQuestion.has("hint") &&
                     !currentQuestion.path("hint").asText().isEmpty());
 
-            log.info("현재 문제 조회 완료 - sessionId: {}, questionNumber: {}",
-                    sessionId, response.getQuestionNumber());
+            log.info("현재 문제 조회 완료 - problemUuid: {}, questionNumber: {}",
+                    problemUuid, response.getQuestionNumber());
 
             return response;
 
         } catch (Exception e) {
-            log.error("문제 데이터 파싱 실패 - sessionId: {}", sessionId, e);
+            log.error("문제 데이터 파싱 실패 - problemUuid: {}", problemUuid, e);
             throw new RuntimeException("문제 데이터를 파싱할 수 없습니다: " + e.getMessage());
         }
     }
@@ -252,40 +254,43 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 상태 조회 - Fetch Join 적용
+     * 세션 상태 조회 - problemUuid 기반으로 변경
      */
-    public SessionStatusResponse getSessionStatus(UUID sessionId) {
-        log.info("세션 상태 조회 시작 - sessionId: {}", sessionId);
+    public SessionStatusResponse getSessionStatus(UUID problemUuid) {
+        log.info("세션 상태 조회 시작 - problemUuid: {}", problemUuid);
 
-        // 모든 관련 엔티티와 함께 세션 조회
-        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
-                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
+        // problemUuid로 Problem 조회
+        Problem problem = problemRepository.findById(problemUuid)
+                .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+        // Problem과 연결된 ChatSession 조회
+        ChatSession session = problem.getChatSession();
+        if (session == null) {
+            throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+        }
 
         SessionStatusResponse response = new SessionStatusResponse();
         response.setSessionId(session.getUuid().toString());
 
-        // 세션과 연결된 문제 정보 조회 (이미 fetch join으로 로드됨)
-        Optional<Problem> problemOpt = session.getProblems().stream().findFirst();
+        // 문제 정보 조회
+        try {
+            String problemsJson = problem.getProblems();
+            if (problemsJson != null && !problemsJson.isEmpty()) {
+                JsonNode problemsNode = objectMapper.readTree(problemsJson);
+                JsonNode questionsArray = problemsNode.get("questions");
 
-        if (problemOpt.isPresent()) {
-            Problem problem = problemOpt.get();
-            try {
-                String problemsJson = problem.getProblems();
-                if (problemsJson != null && !problemsJson.isEmpty()) {
-                    JsonNode problemsNode = objectMapper.readTree(problemsJson);
-                    JsonNode questionsArray = problemsNode.get("questions");
-
-                    if (questionsArray != null && questionsArray.isArray()) {
-                        response.setTotalQuestions(questionsArray.size());
-                    }
+                if (questionsArray != null && questionsArray.isArray()) {
+                    response.setTotalQuestions(questionsArray.size());
                 }
-
-                // 과목 정보 (이미 fetch join으로 로드됨)
-                response.setSubjectTitle(session.getSubject().getTitle());
-
-            } catch (Exception e) {
-                log.warn("문제 정보 파싱 실패 - sessionId: {}", sessionId);
             }
+
+            // 과목 정보
+            if (problem.getSubject() != null) {
+                response.setSubjectTitle(problem.getSubject().getTitle());
+            }
+
+        } catch (Exception e) {
+            log.warn("문제 정보 파싱 실패 - problemUuid: {}", problemUuid);
         }
 
         // extractedKeywords에서 현재 상태 파싱
@@ -303,7 +308,7 @@ public class ProblemSessionService {
                 response.setParticipantCount(1);
             }
         } catch (Exception e) {
-            log.warn("세션 상태 파싱 실패, 기본값 사용 - sessionId: {}", sessionId);
+            log.warn("세션 상태 파싱 실패, 기본값 사용 - problemUuid: {}", problemUuid);
             response.setStatus("WAITING");
             response.setCurrentQuestionNumber(1);
             response.setParticipantCount(1);
@@ -323,67 +328,84 @@ public class ProblemSessionService {
     }
 
     /**
-     * 세션 활성 여부 확인 - Fetch Join 적용
+     * 세션 활성 여부 확인 - problemUuid 기반으로 변경
      */
-    public boolean isSessionActive(UUID sessionId) {
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findByIdWithAllRelations(sessionId);
-        if (sessionOpt.isEmpty()) {
-            return false;
-        }
-
-        ChatSession session = sessionOpt.get();
-
-        // 세션에 연결된 문제가 있는지 확인 (이미 fetch join으로 로드됨)
-        if (session.getProblems().isEmpty()) {
-            return false;
-        }
-
-        // 세션 상태 확인
-        if (session.getStatus() != ChatSession.SessionStatus.ACTIVE) {
-            return false;
-        }
-
-        String metadataJson = session.getExtractedKeywords();
-
+    public boolean isSessionActive(UUID problemUuid) {
         try {
-            if (metadataJson != null && !metadataJson.isEmpty()) {
-                JsonNode metadataNode = objectMapper.readTree(metadataJson);
-                String status = metadataNode.path("status").asText("WAITING");
-                return "IN_PROGRESS".equals(status) || "WAITING".equals(status);
+            Problem problem = problemRepository.findById(problemUuid).orElse(null);
+            if (problem == null) {
+                return false;
             }
-            // metadata가 없으면 WAITING 상태로 간주
+
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                return false;
+            }
+
+            // 세션 상태 확인
+            if (session.getStatus() != ChatSession.SessionStatus.ACTIVE) {
+                return false;
+            }
+
+            String metadataJson = session.getExtractedKeywords();
+
+            try {
+                if (metadataJson != null && !metadataJson.isEmpty()) {
+                    JsonNode metadataNode = objectMapper.readTree(metadataJson);
+                    String status = metadataNode.path("status").asText("WAITING");
+                    return "IN_PROGRESS".equals(status) || "WAITING".equals(status);
+                }
+                // metadata가 없으면 WAITING 상태로 간주
+                return true;
+            } catch (Exception e) {
+                log.warn("세션 상태 확인 실패 - problemUuid: {}", problemUuid);
+                return true; // 파싱 실패 시 활성으로 간주
+            }
+        } catch (Exception e) {
+            log.error("세션 활성 여부 확인 실패 - problemUuid: {}", problemUuid, e);
+            return false;
+        }
+    }
+
+    /**
+     * 참가자 여부 확인 - problemUuid 기반으로 변경
+     */
+    public boolean isParticipant(UUID problemUuid, UUID userId) {
+        try {
+            Problem problem = problemRepository.findById(problemUuid).orElse(null);
+            if (problem == null) {
+                return false;
+            }
+
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                return false;
+            }
+
+            // User 관계를 통해 세션 소유자 확인
+            if (session.getUser() != null) {
+                return session.getUser().getUuid().equals(userId);
+            }
+
+            // User 관계가 없으면 모든 사용자 허용
             return true;
         } catch (Exception e) {
-            log.warn("세션 상태 확인 실패 - sessionId: {}", sessionId);
-            return true; // 파싱 실패 시 활성으로 간주
-        }
-    }
-
-    /**
-     * 참가자 여부 확인 - Fetch Join 적용
-     */
-    public boolean isParticipant(UUID sessionId, UUID userId) {
-        Optional<ChatSession> sessionOpt = chatSessionRepository.findByIdWithAllRelations(sessionId);
-        if (sessionOpt.isEmpty()) {
+            log.error("참가자 여부 확인 실패 - problemUuid: {}", problemUuid, e);
             return false;
         }
-
-        ChatSession session = sessionOpt.get();
-        // User 관계를 통해 세션 소유자 확인 (이미 fetch join으로 로드됨)
-        if (session.getUser() != null) {
-            return session.getUser().getUuid().equals(userId);
-        }
-
-        // User 관계가 없으면 모든 사용자 허용
-        return true;
     }
 
     /**
-     * 세션 메타데이터 업데이트 - Fetch Join 적용
+     * 세션 메타데이터 업데이트 - problemUuid 기반으로 변경
      */
-    public void updateSessionMetadata(UUID sessionId, Map<String, Object> updates) {
-        ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
-                .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
+    public void updateSessionMetadata(UUID problemUuid, Map<String, Object> updates) {
+        Problem problem = problemRepository.findById(problemUuid)
+                .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+        ChatSession session = problem.getChatSession();
+        if (session == null) {
+            throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+        }
 
         String metadataJson = session.getExtractedKeywords();
 
@@ -405,52 +427,185 @@ public class ProblemSessionService {
 
             chatSessionRepository.save(session);
 
-            log.info("세션 메타데이터 업데이트 완료 - sessionId: {}", sessionId);
+            log.info("세션 메타데이터 업데이트 완료 - problemUuid: {}", problemUuid);
         } catch (Exception e) {
-            log.error("세션 메타데이터 업데이트 실패 - sessionId: {}", sessionId, e);
+            log.error("세션 메타데이터 업데이트 실패 - problemUuid: {}", problemUuid, e);
             throw new RuntimeException("세션 메타데이터 업데이트에 실패했습니다: " + e.getMessage());
         }
     }
 
     /**
-     * 다음 문제로 이동 - Fetch Join 적용
+     * 다음 문제로 이동 - problemUuid 기반 (이미 구현되어 있음)
      */
-    public Map<String, Object> moveToNextQuestion(UUID sessionId) {
+    public Map<String, Object> moveToNextQuestion(UUID problemUuid) {
         try {
-            ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
-                    .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
+            log.info("다음 문제로 이동 시작 - problemUuid: {}", problemUuid);
 
+            // 1. Problem 직접 조회
+            Problem problem = problemRepository.findById(problemUuid)
+                    .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+            // 2. Problem과 연결된 ChatSession 조회
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 채팅 세션을 찾을 수 없습니다.");
+            }
+
+            String problemsJson = problem.getProblems();
+            if (problemsJson == null || problemsJson.isEmpty()) {
+                throw new RuntimeException("문제 데이터가 비어있습니다.");
+            }
+
+            // 3. 현재 문제 인덱스 가져오기 (ChatSession의 메타데이터에서)
             int currentIndex = getCurrentQuestionIndex(session);
+            log.debug("현재 문제 인덱스: {}", currentIndex);
 
-            // 현재 인덱스를 1 증가
+            // 4. JSON에서 전체 문제 수 확인
+            JsonNode problemsNode = objectMapper.readTree(problemsJson);
+            JsonNode questionsArray = problemsNode.get("questions");
+
+            if (questionsArray == null || !questionsArray.isArray()) {
+                throw new RuntimeException("문제 배열을 찾을 수 없습니다.");
+            }
+
+            int totalQuestions = questionsArray.size();
+            log.debug("전체 문제 수: {}, 현재 인덱스: {}", totalQuestions, currentIndex);
+
+            // 5. 마지막 문제인지 확인
+            if (currentIndex + 1 >= totalQuestions) {
+                log.info("마지막 문제에 도달 - problemUuid: {}", problemUuid);
+
+                // 세션 완료 처리
+                Map<String, Object> updates = new HashMap<>();
+                updates.put("status", "COMPLETED");
+                updates.put("completedAt", LocalDateTime.now().toString());
+                updateSessionMetadata(problemUuid, updates);
+
+                return Map.of(
+                        "problemUuid", problemUuid,
+                        "currentQuestionNumber", currentIndex + 1,
+                        "totalQuestions", totalQuestions,
+                        "hasNext", false,
+                        "isCompleted", true,
+                        "message", "모든 문제가 완료되었습니다."
+                );
+            }
+
+            // 6. 다음 문제로 이동
+            int nextIndex = currentIndex + 1;
             Map<String, Object> updates = new HashMap<>();
-            updates.put("currentQuestionIndex", currentIndex + 1);
+            updates.put("currentQuestionIndex", nextIndex);
             updates.put("status", "IN_PROGRESS");
 
-            updateSessionMetadata(sessionId, updates);
+            updateSessionMetadata(problemUuid, updates);
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("success", true);
-            result.put("currentQuestionNumber", currentIndex + 2);
-            result.put("message", "다음 문제로 이동했습니다.");
+            log.info("다음 문제로 이동 완료 - problemUuid: {}, 다음 문제: {}", problemUuid, nextIndex + 1);
 
-            return result;
+            return Map.of(
+                    "problemUuid", problemUuid,
+                    "currentQuestionNumber", nextIndex + 1,
+                    "totalQuestions", totalQuestions,
+                    "hasNext", (nextIndex + 1) < totalQuestions,
+                    "isCompleted", false,
+                    "message", "다음 문제로 이동했습니다."
+            );
+
         } catch (Exception e) {
-            log.error("다음 문제 이동 실패 - sessionId: {}", sessionId, e);
-            Map<String, Object> errorResult = new HashMap<>();
-            errorResult.put("success", false);
-            errorResult.put("message", "다음 문제로 이동에 실패했습니다: " + e.getMessage());
-            return errorResult;
+            log.error("다음 문제 이동 실패 - problemUuid: {}", problemUuid, e);
+            throw new RuntimeException("다음 문제로 이동에 실패했습니다: " + e.getMessage());
         }
     }
 
     /**
-     * 세션 완료 처리 - Fetch Join 적용
+     * 이전 문제로 이동 - problemUuid 기반
      */
-    public Map<String, Object> completeSession(UUID sessionId) {
+    public Map<String, Object> moveToPreviousQuestion(UUID problemUuid) {
         try {
-            ChatSession session = chatSessionRepository.findByIdWithAllRelations(sessionId)
-                    .orElseThrow(() -> new RuntimeException("세션을 찾을 수 없습니다."));
+            log.info("이전 문제로 이동 시작 - problemUuid: {}", problemUuid);
+
+            // 1. Problem 직접 조회
+            Problem problem = problemRepository.findById(problemUuid)
+                    .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+            // 2. Problem과 연결된 ChatSession 조회
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 채팅 세션을 찾을 수 없습니다.");
+            }
+
+            String problemsJson = problem.getProblems();
+            if (problemsJson == null || problemsJson.isEmpty()) {
+                throw new RuntimeException("문제 데이터가 비어있습니다.");
+            }
+
+            // 3. 현재 문제 인덱스 가져오기
+            int currentIndex = getCurrentQuestionIndex(session);
+            log.debug("현재 문제 인덱스: {}", currentIndex);
+
+            // 4. JSON에서 전체 문제 수 확인
+            JsonNode problemsNode = objectMapper.readTree(problemsJson);
+            JsonNode questionsArray = problemsNode.get("questions");
+
+            if (questionsArray == null || !questionsArray.isArray()) {
+                throw new RuntimeException("문제 배열을 찾을 수 없습니다.");
+            }
+
+            int totalQuestions = questionsArray.size();
+            log.debug("전체 문제 수: {}, 현재 인덱스: {}", totalQuestions, currentIndex);
+
+            // 5. 첫 번째 문제인지 확인
+            if (currentIndex <= 0) {
+                log.info("첫 번째 문제에 도달 - problemUuid: {}", problemUuid);
+
+                return Map.of(
+                        "problemUuid", problemUuid,
+                        "currentQuestionNumber", 1,
+                        "totalQuestions", totalQuestions,
+                        "hasPrevious", false,
+                        "isFirstQuestion", true,
+                        "message", "이미 첫 번째 문제입니다."
+                );
+            }
+
+            // 6. 이전 문제로 이동
+            int previousIndex = currentIndex - 1;
+            Map<String, Object> updates = new HashMap<>();
+            updates.put("currentQuestionIndex", previousIndex);
+            updates.put("status", "IN_PROGRESS");
+
+            updateSessionMetadata(problemUuid, updates);
+
+            log.info("이전 문제로 이동 완료 - problemUuid: {}, 이전 문제: {}", problemUuid, previousIndex + 1);
+
+            return Map.of(
+                    "problemUuid", problemUuid,
+                    "currentQuestionNumber", previousIndex + 1,
+                    "totalQuestions", totalQuestions,
+                    "hasPrevious", previousIndex > 0,
+                    "hasNext", (previousIndex + 1) < totalQuestions,
+                    "isFirstQuestion", previousIndex == 0,
+                    "isCompleted", false,
+                    "message", "이전 문제로 이동했습니다."
+            );
+
+        } catch (Exception e) {
+            log.error("이전 문제 이동 실패 - problemUuid: {}", problemUuid, e);
+            throw new RuntimeException("이전 문제로 이동에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 세션 완료 처리 - problemUuid 기반으로 변경
+     */
+    public Map<String, Object> completeSession(UUID problemUuid) {
+        try {
+            Problem problem = problemRepository.findById(problemUuid)
+                    .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+            }
 
             // 세션 상태를 완료로 변경
             session.setStatus(ChatSession.SessionStatus.COMPLETED);
@@ -460,7 +615,7 @@ public class ProblemSessionService {
             updates.put("status", "COMPLETED");
             updates.put("completedAt", LocalDateTime.now().toString());
 
-            updateSessionMetadata(sessionId, updates);
+            updateSessionMetadata(problemUuid, updates);
 
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
@@ -469,11 +624,57 @@ public class ProblemSessionService {
 
             return result;
         } catch (Exception e) {
-            log.error("세션 완료 처리 실패 - sessionId: {}", sessionId, e);
+            log.error("세션 완료 처리 실패 - problemUuid: {}", problemUuid, e);
             Map<String, Object> errorResult = new HashMap<>();
             errorResult.put("success", false);
             errorResult.put("message", "세션 완료 처리에 실패했습니다: " + e.getMessage());
             return errorResult;
+        }
+    }
+
+    /**
+     * 채팅 세션의 모든 문제 세트 조회 (새로 추가)
+     */
+    public List<Problem> getProblemsForChatSession(UUID chatSessionUuid) {
+        try {
+            log.info("채팅 세션의 문제 세트 조회 - chatSessionUuid: {}", chatSessionUuid);
+            return problemRepository.findAllByChatSession_Uuid(chatSessionUuid);
+        } catch (Exception e) {
+            log.error("채팅 세션의 문제 세트 조회 실패 - chatSessionUuid: {}", chatSessionUuid, e);
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 문제 세트 요약 정보 조회 (새로 추가)
+     */
+    public Map<String, Object> getProblemSummary(UUID problemUuid) {
+        try {
+            Problem problem = problemRepository.findById(problemUuid)
+                    .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+            String problemsJson = problem.getProblems();
+            JsonNode problemsNode = objectMapper.readTree(problemsJson);
+            JsonNode questionsArray = problemsNode.get("questions");
+
+            Map<String, Object> summary = new HashMap<>();
+            summary.put("problemUuid", problemUuid);
+            summary.put("title", problemsNode.path("title").asText("AI 생성 문제"));
+            summary.put("totalQuestions", questionsArray != null ? questionsArray.size() : 0);
+            summary.put("keywords", problemsNode.path("keywords").asText(""));
+            summary.put("createdAt", problem.getCreatedData());
+
+            if (problem.getSubject() != null) {
+                summary.put("subjectTitle", problem.getSubject().getTitle());
+            }
+
+            return summary;
+
+        } catch (Exception e) {
+            log.error("문제 세트 요약 정보 조회 실패 - problemUuid: {}", problemUuid, e);
+            Map<String, Object> errorSummary = new HashMap<>();
+            errorSummary.put("error", "문제 정보를 불러올 수 없습니다.");
+            return errorSummary;
         }
     }
 }
