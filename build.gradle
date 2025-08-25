@@ -90,7 +90,7 @@ bootJar {
     archiveFileName = "${project.name}-${project.version}.jar"
     manifest {
         attributes(
-                'Main-Class': 'org.springframework.boot.loader.JarLauncher'
+                'Main-Class': 'org.springframework.boot.loader.launch.JarLauncher'
         )
     }
 }
