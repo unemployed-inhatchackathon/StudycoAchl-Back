@@ -80,6 +80,10 @@ tasks.named('bootRun') {
     }
 }
 
+configurations {
+    all*.exclude group: 'com.h2database', module: 'h2'
+}
+
 // === JAR 설정 ===
 jar {
     enabled = false  // Plain JAR 비활성화
