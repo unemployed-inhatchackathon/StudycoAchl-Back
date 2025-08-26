@@ -397,9 +397,13 @@ public class ProblemSessionController {
         try {
             log.info("OpenAI 연결 테스트 시작");
 
-            // 테스트용 UUID 생성
-            UUID testUserId = UUID.randomUUID();
-            UUID testSubjectId = UUID.randomUUID();
+            // 기존 코드 (문제 있음)
+            // UUID testUserId = UUID.randomUUID();
+            // UUID testSubjectId = UUID.randomUUID();
+
+            // 수정된 코드 - 실제 사용자/과목 생성
+            UUID testUserId = sessionService.createTestUserIfNotExists("openai-test@example.com");
+            UUID testSubjectId = sessionService.createTestSubjectIfNotExists(testUserId, "OpenAI테스트과목");
 
             Map<String, Object> result = problemGenerationService.generateProblemsFromKeywords(
                     testUserId, testSubjectId,

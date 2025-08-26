@@ -42,11 +42,8 @@ public class ProblemSessionService {
             log.info("문제풀이 세션 생성 시작 - title: {}, questionCount: {}", title, questionCount);
 
             // 1. 사용자와 과목 조회
-            User user = userRepository.findById(userUuid)
-                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
-
-            Subject subject = subjectRepository.findById(subjectUuid)
-                    .orElseThrow(() -> new RuntimeException("과목을 찾을 수 없습니다: " + subjectUuid));
+            User user = findUserWithValidation(userUuid);
+            Subject subject = findSubjectWithValidation(subjectUuid);
 
             // 2. 새로운 채팅 세션 생성
             ChatSession chatSession = ChatSession.builder()
@@ -706,6 +703,111 @@ public class ProblemSessionService {
             Map<String, Object> errorSummary = new HashMap<>();
             errorSummary.put("error", "문제 정보를 불러올 수 없습니다.");
             return errorSummary;
+        }
+    }
+    /**
+     * 사용자 조회 및 검증 - 핵심 수정 부분
+     */
+    private User findUserWithValidation(UUID userUuid) {
+        if (userUuid == null) {
+            throw new RuntimeException("사용자 UUID가 null입니다.");
+        }
+
+        if (!userRepository.existsById(userUuid)) {
+            log.error("사용자가 존재하지 않음 - UUID: {}", userUuid);
+
+            List<User> allUsers = userRepository.findAll();
+            log.debug("현재 데이터베이스에 있는 사용자 수: {}", allUsers.size());
+
+            if (!allUsers.isEmpty()) {
+                User firstUser = allUsers.get(0);
+                log.debug("첫 번째 사용자 UUID: {}", firstUser.getUuid());
+                log.debug("요청된 UUID: {}", userUuid);
+            }
+
+            throw new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid);
+        }
+
+        return userRepository.findById(userUuid)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
+    }
+
+    /**
+     * 테스트 사용자 생성 (디버깅용)
+     */
+    public UUID createTestUserIfNotExists(String testEmail) {
+        try {
+            Optional<User> existingUser = userRepository.findByEmail(testEmail);
+            if (existingUser.isPresent()) {
+                return existingUser.get().getUuid();
+            }
+
+            User testUser = User.builder()
+                    .email(testEmail)
+                    .password("test123")
+                    .nickname("테스트사용자")
+                    .token("test_token_" + UUID.randomUUID())
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            User savedUser = userRepository.save(testUser);
+            log.info("테스트 사용자 생성됨 - UUID: {}", savedUser.getUuid());
+            return savedUser.getUuid();
+
+        } catch (Exception e) {
+            log.error("테스트 사용자 생성 실패", e);
+            throw new RuntimeException("테스트 사용자 생성에 실패했습니다: " + e.getMessage());
+        }
+    }
+    /**
+     * 과목 조회 및 검증 - 향상된 버전
+     */
+    private Subject findSubjectWithValidation(UUID subjectUuid) {
+        log.debug("과목 조회 시작 - UUID: {}", subjectUuid);
+
+        if (subjectUuid == null) {
+            throw new RuntimeException("과목 UUID가 null입니다.");
+        }
+
+        if (!subjectRepository.existsById(subjectUuid)) {
+            log.error("과목이 존재하지 않음 - UUID: {}", subjectUuid);
+
+            // 디버깅을 위해 기존 과목들 출력
+            List<Subject> allSubjects = subjectRepository.findAll();
+            log.debug("현재 데이터베이스에 있는 과목 수: {}", allSubjects.size());
+
+            throw new RuntimeException("과목을 찾을 수 없습니다: " + subjectUuid);
+        }
+
+        return subjectRepository.findById(subjectUuid)
+                .orElseThrow(() -> new RuntimeException("과목을 찾을 수 없습니다: " + subjectUuid));
+    }
+    /**
+     * 테스트 과목 생성 (디버깅용)
+     */
+    public UUID createTestSubjectIfNotExists(UUID userUuid, String subjectTitle) {
+        try {
+            Optional<Subject> existingSubject = subjectRepository.findByUser_UuidAndTitle(userUuid, subjectTitle);
+            if (existingSubject.isPresent()) {
+                return existingSubject.get().getUuid();
+            }
+
+            User user = userRepository.findById(userUuid)
+                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+            Subject testSubject = Subject.builder()
+                    .user(user)
+                    .title(subjectTitle)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+
+            Subject savedSubject = subjectRepository.save(testSubject);
+            log.info("테스트 과목 생성됨 - UUID: {}", savedSubject.getUuid());
+            return savedSubject.getUuid();
+
+        } catch (Exception e) {
+            log.error("테스트 과목 생성 실패", e);
+            throw new RuntimeException("테스트 과목 생성에 실패했습니다: " + e.getMessage());
         }
     }
 }
