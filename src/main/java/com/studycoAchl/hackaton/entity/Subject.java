@@ -33,7 +33,7 @@ public class Subject {
     @Column(name = "createdAt")
     private LocalDateTime createdAt;
 
-    @Column(name = "user_uuid", columnDefinition = "BINARY(16)", nullable = false)
+    @JoinColumn(name = "user_uuid", columnDefinition = "BINARY(16)", foreignKey = @ForeignKey(name = "FK_subject_user"))
     private UUID userUuid;
 
     // Exams와의 관계
