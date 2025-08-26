@@ -19,22 +19,22 @@ public class Problem {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "problems", columnDefinition = "JSON")
     private String problems;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "chat_session_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "chat_session_uuid", referencedColumnName = "uuid")
     private ChatSession chatSession;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
     private Subject subject;
 
     // 추가 필드들 (기존 코드 호환성을 위해) - UUID 타입으로 변경

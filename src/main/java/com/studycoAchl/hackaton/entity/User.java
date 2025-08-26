@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "User")
+@Table(name = "users")
 @Data
 @Builder
 @NoArgsConstructor
@@ -20,7 +20,7 @@ public class User {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "Token", length = 500)

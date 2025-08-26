@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "subject")
+@Table(name = "subjects")
 @Data
 @Builder
 @NoArgsConstructor
@@ -24,7 +24,7 @@ public class Subject {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "title", nullable = false)
@@ -35,7 +35,7 @@ public class Subject {
 
     // User와의 관계
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     @JsonBackReference
     private User user;
 

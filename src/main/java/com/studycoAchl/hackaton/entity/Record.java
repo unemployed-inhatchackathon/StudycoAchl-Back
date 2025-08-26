@@ -20,7 +20,7 @@ public class Record {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "title")
@@ -54,7 +54,7 @@ public class Record {
     private LocalDateTime createdAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     private User user;
 
     @PrePersist

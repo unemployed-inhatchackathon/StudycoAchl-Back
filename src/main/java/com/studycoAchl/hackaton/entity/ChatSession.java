@@ -23,7 +23,7 @@ public class ChatSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "chatTitle", length = 200)
@@ -59,12 +59,12 @@ public class ChatSession {
 
     // JPA 관계 매핑
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     @JsonBackReference
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
     @JsonBackReference
     private Subject subject;
 
