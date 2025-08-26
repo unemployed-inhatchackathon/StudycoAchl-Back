@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -41,15 +42,10 @@ public class User {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    // 관계 매핑 (당신 구조 유지)
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Subject> subjects;
+    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_uuid")
+    private List<Subject> subjects = new ArrayList<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ChatSession> chatSessions;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Problem> problems;
 
     @PrePersist
     protected void onCreate() {

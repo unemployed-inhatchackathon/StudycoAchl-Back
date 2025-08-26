@@ -19,9 +19,6 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     List<ChatSession> findBySubject_Uuid(UUID subjectUuid);
     List<ChatSession> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
 
-    // 제목 기반 검색
-    List<ChatSession> findByTitleContaining(String title);
-
     // 상태 기반 조회
     List<ChatSession> findByStatus(ChatSession.SessionStatus status);
     List<ChatSession> findByUser_UuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);

@@ -65,7 +65,6 @@ public class ChatSession {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
-    @JsonBackReference
     private Subject subject;
 
     @OneToMany(mappedBy = "chatSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
