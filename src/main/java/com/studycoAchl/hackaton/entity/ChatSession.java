@@ -29,7 +29,7 @@ public class ChatSession {
     @Column(name = "chatTitle", length = 200)
     private String title;
 
-    // JSON으로 메시지 저장 (당신 방식 유지)
+    // JSON으로 메시지 저장
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "messages", columnDefinition = "JSON")
     private List<ChatMessage> messages;

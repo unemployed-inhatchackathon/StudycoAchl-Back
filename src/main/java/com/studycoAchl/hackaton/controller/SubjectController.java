@@ -7,6 +7,7 @@ import com.studycoAchl.hackaton.service.SubjectService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,7 +26,7 @@ public class SubjectController {
     /**
      * 과목 생성
      */
-    @PostMapping("/users/{userUuid}/subjects")
+    @PostMapping(value = "/users/{userUuid}/subjects", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<ApiResponse<Subject>> createSubject(
             @PathVariable UUID userUuid,
             @RequestBody String title) {

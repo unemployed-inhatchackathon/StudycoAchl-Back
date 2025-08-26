@@ -18,7 +18,7 @@ public class Exams {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "uuid")
+    @Column(name = "UUID", columnDefinition = "Binary(16)")
     private UUID uuid;
 
     @Column(name = "title")
@@ -28,10 +28,10 @@ public class Exams {
     private Integer proSu;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
+    @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
     private Subject subject;
 }
