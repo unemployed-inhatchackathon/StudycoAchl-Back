@@ -21,8 +21,6 @@ public class AiService {
     @Value("${app.use-real-ai:true}")
     private boolean useRealAi;
 
-    // ========== 채팅 응답 생성 ==========
-
     public String generateResponse(String userMessage, String subjectName) {
         if (!useRealAi) {
             return generateMockResponse(userMessage, subjectName);
