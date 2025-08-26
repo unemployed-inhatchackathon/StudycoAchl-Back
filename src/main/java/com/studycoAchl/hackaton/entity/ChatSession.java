@@ -23,13 +23,13 @@ public class ChatSession {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
-    @Column(name = "UUID", columnDefinition = "Binary(16)")
+    @Column(name = "uuid")
     private UUID uuid;
 
     @Column(name = "chatTitle", length = 200)
     private String title;
 
-    // JSON으로 메시지 저장 (당신 방식 유지)
+    // JSON으로 메시지 저장
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "messages", columnDefinition = "JSON")
     private List<ChatMessage> messages;
@@ -59,12 +59,12 @@ public class ChatSession {
 
     // JPA 관계 매핑
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     @JsonBackReference
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
+    @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
     @JsonBackReference
     private Subject subject;
 

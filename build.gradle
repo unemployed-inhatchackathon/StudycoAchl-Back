@@ -59,6 +59,9 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    implementation 'com.google.cloud.sql:mysql-socket-factory-connector-j-8:1.15.0'
+    runtimeOnly 'com.mysql:mysql-connector-j'
 }
 
 // === Task Configuration ===
@@ -90,7 +93,7 @@ bootJar {
     archiveFileName = "${project.name}-${project.version}.jar"
     manifest {
         attributes(
-                'Main-Class': 'org.springframework.boot.loader.JarLauncher'
+                'Main-Class': 'org.springframework.boot.loader.launch.JarLauncher'
         )
     }
 }

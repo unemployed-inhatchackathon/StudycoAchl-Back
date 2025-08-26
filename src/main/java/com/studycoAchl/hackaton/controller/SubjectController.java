@@ -7,6 +7,7 @@ import com.studycoAchl.hackaton.service.SubjectService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/subjects")
+@RequestMapping("/api")
 @RequiredArgsConstructor
 @Slf4j
 public class SubjectController {
@@ -25,7 +26,7 @@ public class SubjectController {
     /**
      * 과목 생성
      */
-    @PostMapping("/users/{userUuid}")
+    @PostMapping(value = "/users/{userUuid}/subjects", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<ApiResponse<Subject>> createSubject(
             @PathVariable UUID userUuid,
             @RequestBody String title) {
@@ -44,7 +45,7 @@ public class SubjectController {
     /**
      * 사용자별 과목 목록 조회
      */
-    @GetMapping("/users/{userUuid}")
+    @GetMapping("/users/{userUuid}subjects")
     public ResponseEntity<ApiResponse<List<Subject>>> getUserSubjects(@PathVariable UUID userUuid) {
         try {
             List<Subject> subjects = subjectService.getUserSubjects(userUuid);
