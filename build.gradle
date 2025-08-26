@@ -57,6 +57,9 @@ dependencies {
     // === Testing ===
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.springframework.security:spring-security-test'
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'com.h2database', module: 'h2'
+    }
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
@@ -83,6 +86,7 @@ tasks.named('bootRun') {
 configurations {
     all*.exclude group: 'com.h2database', module: 'h2'
 }
+
 
 // === JAR 설정 ===
 jar {
