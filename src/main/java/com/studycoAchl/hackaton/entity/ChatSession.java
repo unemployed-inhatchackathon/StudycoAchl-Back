@@ -61,7 +61,7 @@ public class ChatSession {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
     @JsonBackReference
-    private User user;
+    private app_users user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")
@@ -75,7 +75,7 @@ public class ChatSession {
     }
 
     // 생성자 (편의 메소드)
-    public ChatSession(User user, Subject subject, String title) {
+    public ChatSession(app_users user, Subject subject, String title) {
         this();
         this.user = user;
         this.subject = subject;

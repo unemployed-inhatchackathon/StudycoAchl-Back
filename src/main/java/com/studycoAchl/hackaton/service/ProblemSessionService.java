@@ -5,7 +5,7 @@ import com.studycoAchl.hackaton.dto.SessionStatusResponse;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.User;
+import com.studycoAchl.hackaton.entity.app_users;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
@@ -42,7 +42,7 @@ public class ProblemSessionService {
             log.info("문제풀이 세션 생성 시작 - title: {}, questionCount: {}", title, questionCount);
 
             // 1. 사용자와 과목 조회
-            User user = userRepository.findById(userUuid)
+            app_users user = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             Subject subject = subjectRepository.findById(subjectUuid)
@@ -105,7 +105,7 @@ public class ProblemSessionService {
     /**
      * 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
      */
-    private Problem createMockProblem(ChatSession chatSession, User user, Subject subject, int questionCount) {
+    private Problem createMockProblem(ChatSession chatSession, app_users user, Subject subject, int questionCount) {
         try {
             // 기존 DB 구조에 맞는 문제 데이터 생성
             Map<String, Object> problemData = new HashMap<>();

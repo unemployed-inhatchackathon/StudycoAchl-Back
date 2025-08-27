@@ -29,7 +29,7 @@ public class Exams {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
-    private User user;
+    private app_users user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_uuid", referencedColumnName = "UUID")
