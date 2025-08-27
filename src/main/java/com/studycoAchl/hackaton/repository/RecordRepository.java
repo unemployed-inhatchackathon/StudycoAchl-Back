@@ -25,5 +25,5 @@ public interface RecordRepository extends JpaRepository<Record, UUID> {
     List<Record> findByAppUsers_UuidAndTitleContaining(UUID userUuid, String title);
 
     // 최신 기록 순으로 조회
-    List<Record> findByAppUsers_UuidOrderByCreatedAtDesc(UUID userUuid);
+    List<Record> findByAppUsersUuidOrderByCreatedAtDesc(UUID userUuid);
 }
