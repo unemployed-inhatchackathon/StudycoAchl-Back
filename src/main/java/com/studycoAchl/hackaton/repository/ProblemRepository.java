@@ -11,23 +11,23 @@ import java.util.UUID;
 @Repository
 public interface ProblemRepository extends JpaRepository<Problem, UUID> {
 
-    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
+    // ========== 기본 조회 메소드들 - appUsers로 수정 ==========
 
     // 채팅 세션별 문제 조회
     Optional<Problem> findByChatSession_Uuid(UUID chatSessionUuid);
     List<Problem> findAllByChatSession_Uuid(UUID chatSessionUuid);
 
-    // 사용자별 문제 조회
-    List<Problem> findByUser_Uuid(UUID userUuid);
+    // 사용자별 문제 조회 - appUsers로 수정
+    List<Problem> findByAppUsers_Uuid(UUID userUuid);
 
     // 과목별 문제 조회
     List<Problem> findBySubject_Uuid(UUID subjectUuid);
 
-    // 사용자 + 과목별 문제 조회
-    List<Problem> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
+    // 사용자 + 과목별 문제 조회 - appUsers로 수정
+    List<Problem> findByAppUsers_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
 
-    // 시간 기반 정렬 (최신순)
-    List<Problem> findByUser_UuidOrderByCreatedDataDesc(UUID userUuid);
+    // 시간 기반 정렬 (최신순) - appUsers로 수정
+    List<Problem> findByAppUsers_UuidOrderByCreatedDataDesc(UUID userUuid);
 
     // 채팅 세션이 연결된 문제들 (채팅에서 생성된 문제)
     List<Problem> findByChatSessionIsNotNull();

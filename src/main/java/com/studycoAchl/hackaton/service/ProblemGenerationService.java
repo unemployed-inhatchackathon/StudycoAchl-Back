@@ -345,7 +345,7 @@ public class ProblemGenerationService {
     public Map<String, Object> getProblemGenerationStats(UUID userUuid) {
         try {
             // 사용자의 총 문제 생성 수
-            List<Problem> userProblems = problemRepository.findByUser_Uuid(userUuid);
+            List<Problem> userProblems = problemRepository.findByAppUsers_Uuid(userUuid);
 
             // 최근 생성된 문제들
             List<Problem> recentProblems = userProblems.stream()

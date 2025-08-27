@@ -13,19 +13,19 @@ import java.util.UUID;
 @Repository
 public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> {
 
-    // ========== 기본 조회 메소드들 (Service와 이름 맞춤) ==========
+    // ========== 기본 조회 메소드들 - appUsers로 수정 ==========
 
     // Service에서 사용하는 메소드명과 일치하도록 수정
-    List<ChatSession> findByUser_Uuid(UUID userUuid);
+    List<ChatSession> findByAppUsers_Uuid(UUID userUuid);
     List<ChatSession> findBySubject_Uuid(UUID subjectUuid);
-    List<ChatSession> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
+    List<ChatSession> findByAppUsers_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);
 
-    // 상태 기반 조회
+    // 상태 기반 조회 - appUsers로 수정
     List<ChatSession> findByStatus(ChatSession.SessionStatus status);
-    List<ChatSession> findByUser_UuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);
+    List<ChatSession> findByAppUsers_UuidAndStatus(UUID userUuid, ChatSession.SessionStatus status);
 
-    // 시간 기반 정렬
-    List<ChatSession> findByUser_UuidOrderByCreatedDataDesc(UUID userUuid);
+    // 시간 기반 정렬 - appUsers로 수정
+    List<ChatSession> findByAppUsers_UuidOrderByCreatedDataDesc(UUID userUuid);
 
     // ========== 키워드 및 문제 생성 관련 (@Query 사용) ==========
 
@@ -41,7 +41,7 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     @Query("SELECT cs FROM ChatSession cs WHERE cs.generatedProblemCount > 0")
     List<ChatSession> findSessionsWithProblems();
 
-    // 사용자별 문제 생성된 세션들
+    // 사용자별 문제 생성된 세션들 (@Query 방식은 이미 올바름)
     @Query("SELECT cs FROM ChatSession cs WHERE cs.appUsers.uuid = :userUuid AND cs.generatedProblemCount > 0")
     List<ChatSession> findSessionsWithProblemsByUser(@Param("userUuid") UUID userUuid);
 

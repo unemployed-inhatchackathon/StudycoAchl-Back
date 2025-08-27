@@ -29,13 +29,13 @@ public class WrongAnswerService {
     private final ObjectMapper objectMapper;
 
     /**
-     * 사용자 오답노트 조회
+     * 사용자 오답노트 조회 - Repository 메소드명 수정
      */
     public Map<String, Object> getUserWrongAnswers(UUID userUuid) {
         try {
             log.info("오답노트 조회 - userUuid: {}", userUuid);
 
-            List<WrongAnswerNote> allWrongNotes = wrongAnswerNoteRepository.findByUser_Uuid(userUuid);
+            List<WrongAnswerNote> allWrongNotes = wrongAnswerNoteRepository.findByAppUsers_Uuid(userUuid);
             List<WrongAnswerNote> notMastered = wrongAnswerNoteRepository.findNotMasteredByUser(userUuid);
 
             Map<String, Object> result = new HashMap<>();
@@ -58,11 +58,11 @@ public class WrongAnswerService {
     }
 
     /**
-     * 과목별 오답노트 조회
+     * 과목별 오답노트 조회 - Repository 메소드명 수정
      */
     public Map<String, Object> getSubjectWrongAnswers(UUID userUuid, UUID subjectUuid) {
         try {
-            List<WrongAnswerNote> subjectWrongNotes = wrongAnswerNoteRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);
+            List<WrongAnswerNote> subjectWrongNotes = wrongAnswerNoteRepository.findByAppUsers_UuidAndSubject_Uuid(userUuid, subjectUuid);
             List<WrongAnswerNote> notMastered = wrongAnswerNoteRepository.findNotMasteredByUserAndSubject(userUuid, subjectUuid);
 
             Map<String, Object> result = new HashMap<>();

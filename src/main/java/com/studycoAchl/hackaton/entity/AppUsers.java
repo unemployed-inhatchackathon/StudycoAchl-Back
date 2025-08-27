@@ -1,5 +1,6 @@
 package com.studycoAchl.hackaton.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -42,10 +43,10 @@ public class AppUsers {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_uuid")
+    // Subject와의 관계 - mappedBy 수정
+    @OneToMany(mappedBy = "appUsers", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Subject> subjects = new ArrayList<>();
-
 
     @PrePersist
     protected void onCreate() {

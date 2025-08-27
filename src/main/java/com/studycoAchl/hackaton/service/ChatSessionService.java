@@ -71,7 +71,7 @@ public class ChatSessionService {
     }
 
     public List<ChatSession> findByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_Uuid(userUuid);  // 원래대로 복구
+        return chatSessionRepository.findByAppUsers_Uuid(userUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findBySubject(UUID subjectUuid) {
@@ -79,11 +79,11 @@ public class ChatSessionService {
     }
 
     public List<ChatSession> findByUserAndSubject(UUID userUuid, UUID subjectUuid) {
-        return chatSessionRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);  // 원래대로 복구
+        return chatSessionRepository.findByAppUsers_UuidAndSubject_Uuid(userUuid, subjectUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findActiveSessionsByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);  // 원래대로 복구
+        return chatSessionRepository.findByAppUsers_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);  // 원래대로 복구
     }
 
     // ========== 키워드 관련 기능 (통합 기능) ==========

@@ -18,7 +18,7 @@ public interface UserAnswerRepository extends JpaRepository<UserAnswer, UUID> {
     // 정답/오답별 조회
     List<UserAnswer> findByQuizResult_UuidAndIsCorrect(UUID quizResultUuid, Boolean isCorrect);
 
-    // 틀린 답안들만 조회 (오답노트용)
+    // 틀린 답안들만 조회 (오답노트용) - @Query 방식은 이미 올바름
     @Query("SELECT ua FROM UserAnswer ua WHERE ua.quizResult.appUsers.uuid = :userUuid AND ua.isCorrect = false")
     List<UserAnswer> findWrongAnswersByUser(@Param("userUuid") UUID userUuid);
 

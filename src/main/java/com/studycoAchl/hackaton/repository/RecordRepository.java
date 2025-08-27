@@ -10,20 +10,20 @@ import java.util.UUID;
 @Repository
 public interface RecordRepository extends JpaRepository<Record, UUID> {
 
-    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
+    // ========== 기본 조회 메소드들 - appUsers로 수정 ==========
 
     // 사용자별 기록 조회
-    List<Record> findByUser_Uuid(UUID userUuid);
+    List<Record> findByAppUsers_Uuid(UUID userUuid);
 
     // 즐겨찾기 기록 조회
-    List<Record> findByUser_UuidAndIsFavoriteTrue(UUID userUuid);
+    List<Record> findByAppUsers_UuidAndIsFavoriteTrue(UUID userUuid);
 
     // 만료되지 않은 기록 조회
-    List<Record> findByUser_UuidAndIsExpiredIsNull(UUID userUuid);
+    List<Record> findByAppUsers_UuidAndIsExpiredIsNull(UUID userUuid);
 
     // 제목으로 기록 검색
-    List<Record> findByUser_UuidAndTitleContaining(UUID userUuid, String title);
+    List<Record> findByAppUsers_UuidAndTitleContaining(UUID userUuid, String title);
 
     // 최신 기록 순으로 조회
-    List<Record> findByUser_UuidOrderByCreatedAtDesc(UUID userUuid);
+    List<Record> findByAppUsers_UuidOrderByCreatedAtDesc(UUID userUuid);
 }

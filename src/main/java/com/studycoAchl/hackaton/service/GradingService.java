@@ -208,11 +208,11 @@ public class GradingService {
             List<UserAnswer> wrongAnswers = userAnswerRepository.findWrongAnswersByUser(userUuid);
 
             // 최근 퀴즈 결과들
-            List<QuizResult> recentQuizzes = quizResultRepository.findByUser_UuidOrderByCompletedAtDesc(userUuid);
+            List<QuizResult> recentQuizzes = quizResultRepository.findByAppUsers_UuidOrderByCompletedAtDesc(userUuid);
 
             // 오답노트 통계
-            List<WrongAnswerNote> totalWrongNotes = wrongAnswerNoteRepository.findByUser_Uuid(userUuid);
-            List<WrongAnswerNote> masteredNotes = wrongAnswerNoteRepository.findByUser_UuidAndIsMastered(userUuid, true);
+            List<WrongAnswerNote> totalWrongNotes = wrongAnswerNoteRepository.findByAppUsers_Uuid(userUuid);
+            List<WrongAnswerNote> masteredNotes = wrongAnswerNoteRepository.findByAppUsers_UuidAndIsMastered(userUuid, true);
 
             Map<String, Object> stats = new HashMap<>();
             stats.put("averageScore", averageScore != null ? Math.round(averageScore * 100.0) / 100.0 : 0.0);
