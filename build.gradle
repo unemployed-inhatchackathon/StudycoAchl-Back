@@ -89,9 +89,6 @@ configurations {
 
 
 // === JAR 설정 ===
-jar {
-    enabled = false  // Plain JAR 비활성화
-}
 
 bootJar {
     archiveFileName = "${project.name}-${project.version}.jar"
