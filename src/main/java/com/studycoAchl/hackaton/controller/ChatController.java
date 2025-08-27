@@ -147,7 +147,7 @@ public class ChatController {
      */
     @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions/{sessionUuid}/messages")
     @Transactional
-    public ResponseEntity<ApiResponse<ChatSession>> addMessage(
+    public ResponseEntity<ApiResponse<Map<String, Object>>> addMessage(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid,
             @PathVariable UUID sessionUuid,
@@ -217,7 +217,14 @@ public class ChatController {
             }
 
             ChatSession updatedSession = chatSessionService.save(session);
-            return ResponseEntity.ok(ApiResponse.success(updatedSession, "메시지가 전송되었습니다."));
+
+            Map<String, Object> result = Map.of(
+                    "sessionId", sessionUuid,
+                    "messageCount", updatedSession.getMessageCount(),
+                    "lastUpdated", LocalDateTime.now()
+            );
+
+            return ResponseEntity.ok(ApiResponse.success(result, "메시지가 전송되었습니다."));
 
         } catch (Exception e) {
             log.error("메시지 전송 실패 - sessionUuid: {}", sessionUuid, e);
