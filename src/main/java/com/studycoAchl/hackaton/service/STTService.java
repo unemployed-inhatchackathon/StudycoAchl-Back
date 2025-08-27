@@ -31,27 +31,24 @@ public class STTService {
 
         File tempFile = null;
         try {
-            // MultipartFile을 임시 파일로 변환
             tempFile = convertMultipartFileToFile(audioFile);
 
             CreateTranscriptionRequest request = CreateTranscriptionRequest.builder()
                     .model("whisper-1")
-                    .language("ko") // 한국어 지정
-                    .responseFormat("text")
+                    .language("ko")
+                    .responseFormat("text") // 이미 text로 설정됨
                     .build();
 
+            // Whisper는 순수 텍스트를 반환함
             String transcription = openAiService.createTranscription(request, tempFile).getText();
 
-            log.info("Whisper STT 변환 완료 - 파일: {}, 텍스트 길이: {}",
-                    audioFile.getOriginalFilename(), transcription.length());
-
-            return transcription;
+            log.info("Whisper STT 변환 완료: {}", transcription);
+            return transcription; // 추가 파싱 없이 그대로 반환
 
         } catch (Exception e) {
-            log.error("STT 변환 실패 - 파일: {}", audioFile.getOriginalFilename(), e);
+            log.error("STT 변환 실패", e);
             throw new RuntimeException("STT 변환 실패: " + e.getMessage());
         } finally {
-            // 임시 파일 삭제
             if (tempFile != null && tempFile.exists()) {
                 tempFile.delete();
             }
@@ -72,7 +69,7 @@ public class STTService {
             CreateTranscriptionRequest request = CreateTranscriptionRequest.builder()
                     .model("whisper-1")
                     .language("ko")
-                    .responseFormat("text")
+                    .responseFormat("json")
                     .build();
 
             String transcription = openAiService.createTranscription(request, audioFile).getText();

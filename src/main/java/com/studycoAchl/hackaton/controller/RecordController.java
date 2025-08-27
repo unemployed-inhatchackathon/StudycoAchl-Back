@@ -31,8 +31,8 @@ public class RecordController {
     @PostMapping("/upload")
     public ResponseEntity<ApiResponse<Record>> uploadRecord(
             @RequestParam("file") MultipartFile file,
-            @RequestParam UUID userId,
-            @RequestParam String title) {
+            @RequestParam("userId") UUID userId,
+            @RequestParam("title") String title) {
 
         try {
             Record record = recordService.uploadAudioFile(userId, title, file);
