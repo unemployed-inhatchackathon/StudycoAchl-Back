@@ -1,6 +1,7 @@
 package com.studycoAchl.hackaton.dto;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -21,13 +22,19 @@ public class ChatMessage {
     private String sender; // "USER" or "AI"
     private String content;
 
+    // ========== 백엔드에서만 사용하는 필드들 (프론트엔드에서는 숨김) ==========
+    @JsonIgnore
+    private Boolean containsEducationalContent; // 교육적 내용 포함 여부
+
+    @JsonIgnore
+    private String extractedKeywords; // 추출된 키워드들 (콤마 구분)
+
+    @JsonIgnore
+    private Boolean processedForKeywords; // 키워드 처리 완료 여부
+
+    @JsonIgnore
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime sentAt;
-
-    // ========== 키워드 통합 기능을 위한 필드 ==========
-    private Boolean containsEducationalContent; // 교육적 내용 포함 여부
-    private String extractedKeywords; // 추출된 키워드들 (콤마 구분)
-    private Boolean processedForKeywords; // 키워드 처리 완료 여부
 
     // ========== 기존 호환성 생성자들 ==========
 
@@ -50,7 +57,7 @@ public class ChatMessage {
         this.processedForKeywords = false;
     }
 
-    // ========== 핵심 편의 메소드들 ==========
+    // ========== 핵심 편의 메소드들 (백엔드에서 사용) ==========
 
     /**
      * 사용자 메시지인지 확인

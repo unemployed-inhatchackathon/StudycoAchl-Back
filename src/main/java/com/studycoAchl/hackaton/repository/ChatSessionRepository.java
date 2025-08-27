@@ -13,8 +13,9 @@ import java.util.UUID;
 @Repository
 public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> {
 
-    // ========== 기본 조회 메소드들 (Spring Data JPA 네이밍 컨벤션) ==========
+    // ========== 기본 조회 메소드들 (Service와 이름 맞춤) ==========
 
+    // Service에서 사용하는 메소드명과 일치하도록 수정
     List<ChatSession> findByUser_Uuid(UUID userUuid);
     List<ChatSession> findBySubject_Uuid(UUID subjectUuid);
     List<ChatSession> findByUser_UuidAndSubject_Uuid(UUID userUuid, UUID subjectUuid);

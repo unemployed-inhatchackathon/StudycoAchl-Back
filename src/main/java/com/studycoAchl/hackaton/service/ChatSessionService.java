@@ -9,6 +9,7 @@ import com.studycoAchl.hackaton.repository.UserRepository;
 import com.studycoAchl.hackaton.dto.ChatMessage;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ import java.util.UUID;
 @Service
 @Transactional
 @RequiredArgsConstructor
+@Slf4j
 public class ChatSessionService {
 
     private final ChatSessionRepository chatSessionRepository;
@@ -69,19 +71,19 @@ public class ChatSessionService {
     }
 
     public List<ChatSession> findByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_Uuid(userUuid);
+        return chatSessionRepository.findByUser_Uuid(userUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findBySubject(UUID subjectUuid) {
-        return chatSessionRepository.findBySubject_Uuid(subjectUuid);
+        return chatSessionRepository.findBySubject_Uuid(subjectUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findByUserAndSubject(UUID userUuid, UUID subjectUuid) {
-        return chatSessionRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);
+        return chatSessionRepository.findByUser_UuidAndSubject_Uuid(userUuid, subjectUuid);  // 원래대로 복구
     }
 
     public List<ChatSession> findActiveSessionsByUser(UUID userUuid) {
-        return chatSessionRepository.findByUser_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);
+        return chatSessionRepository.findByUser_UuidAndStatus(userUuid, ChatSession.SessionStatus.ACTIVE);  // 원래대로 복구
     }
 
     // ========== 키워드 관련 기능 (통합 기능) ==========

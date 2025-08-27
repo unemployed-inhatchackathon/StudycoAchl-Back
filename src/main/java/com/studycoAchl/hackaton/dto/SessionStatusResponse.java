@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,10 +17,6 @@ public class SessionStatusResponse {
     private int currentQuestionNumber;   // 현재 문제 번호
     private int totalQuestions;          // 전체 문제 수
 
-    // ========== 참가자 정보 ==========
-    private Integer participantCount;    // 참가자 수
-
-    // ========== 세션 메타 정보 ==========
-    private LocalDateTime startedAt;     // 세션 시작 시간
+    // ========== 메타 정보 ==========
     private String subjectTitle;         // 과목명
 }
