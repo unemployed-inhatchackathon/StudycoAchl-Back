@@ -36,10 +36,10 @@ public class SecurityConfig {
                     return corsConfiguration;
                 }))
 
-                // 모든 HTTP 메소드 허용
+                // 헤더 설정 (Spring Security 6.1+ 호환)
                 .headers(headers -> headers
-                        .frameOptions().disable()
-                        .contentTypeOptions().disable()
+                        .frameOptions(frameOptions -> frameOptions.disable())
+                        .contentTypeOptions(contentTypeOptions -> contentTypeOptions.disable())
                 )
 
                 // URL별 접근 권한 설정 - 순서 중요!
