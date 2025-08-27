@@ -1,7 +1,7 @@
 package com.studycoAchl.hackaton.service;
 
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.User;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
 import com.studycoAchl.hackaton.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -24,7 +24,7 @@ public class SubjectService {
     public Subject createSubject(UUID userUuid, String title) {
         validateSubjectTitle(title);
 
-        User user = userRepository.findById(userUuid)
+        AppUsers appUsers = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
         // 중복 체크 (필드명 수정: name → title)
@@ -33,7 +33,7 @@ public class SubjectService {
         }
 
         Subject subject = Subject.builder()
-                .user(user)
+                .appUsers(appUsers)
                 .title(title.trim())
                 .build();
 
@@ -78,7 +78,7 @@ public class SubjectService {
 
         // 같은 사용자의 다른 과목과 중복되는지 확인
         if (!subject.getTitle().equals(newTitle) &&
-                subjectExistsByUserAndTitle(subject.getUser().getUuid(), newTitle)) {
+                subjectExistsByUserAndTitle(subject.getAppUsers().getUuid(), newTitle)) {
             throw new IllegalArgumentException("이미 존재하는 과목명입니다.");
         }
 

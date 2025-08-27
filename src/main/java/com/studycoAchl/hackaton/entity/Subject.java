@@ -37,7 +37,7 @@ public class Subject {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
     @JsonBackReference
-    private User user;
+    private AppUsers appUsers;
 
     // ChatSession과의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -57,8 +57,8 @@ public class Subject {
     private List<Problem> problems = new ArrayList<>();
 
     // 생성자 (편의 메소드)
-    public Subject(User user, String title) {
-        this.user = user;
+    public Subject(AppUsers appUsers, String title) {
+        this.appUsers = appUsers;
         this.title = title;
         this.chatSessions = new ArrayList<>();
         this.exams = new ArrayList<>();

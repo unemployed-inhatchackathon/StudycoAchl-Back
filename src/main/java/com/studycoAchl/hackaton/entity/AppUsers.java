@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "User")
+@Table(name = "app_users")
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class User {
+public class AppUsers {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

@@ -2,10 +2,10 @@ package com.studycoAchl.hackaton.service;
 
 import com.studycoAchl.hackaton.dto.CurrentQuestionResponse;
 import com.studycoAchl.hackaton.dto.SessionStatusResponse;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.User;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
@@ -41,12 +41,12 @@ public class ProblemSessionService {
         try {
             log.info("문제풀이 세션 생성 시작 - title: {}, questionCount: {}", title, questionCount);
 
-            User user = findUserWithValidation(userUuid);
+            AppUsers appUsers = findUserWithValidation(userUuid);
             Subject subject = findSubjectWithValidation(subjectUuid);
 
             ChatSession chatSession = ChatSession.builder()
                     .title(title)
-                    .user(user)
+                    .appUsers(appUsers)
                     .subject(subject)
                     .createdData(LocalDateTime.now())
                     .updatedAt(LocalDateTime.now())
@@ -65,7 +65,7 @@ public class ProblemSessionService {
             chatSession.setExtractedKeywords(metadataJson);
 
             ChatSession savedSession = chatSessionRepository.save(chatSession);
-            Problem problem = createSimpleProblem(savedSession, user, subject, questionCount);
+            Problem problem = createSimpleProblem(savedSession, appUsers, subject, questionCount);
             problemRepository.save(problem);
 
             Map<String, Object> result = new HashMap<>();
@@ -89,7 +89,7 @@ public class ProblemSessionService {
     /**
      * 간단한 문제 데이터 생성 (불필요한 필드 제거)
      */
-    private Problem createSimpleProblem(ChatSession chatSession, User user, Subject subject, int questionCount) {
+    private Problem createSimpleProblem(ChatSession chatSession, AppUsers appUsers, Subject subject, int questionCount) {
         try {
             Map<String, Object> problemData = new HashMap<>();
             problemData.put("title", "AI 생성 문제");
@@ -114,7 +114,7 @@ public class ProblemSessionService {
 
             return Problem.builder()
                     .problems(problemsJson)
-                    .user(user)
+                    .appUsers(appUsers)
                     .subject(subject)
                     .chatSession(chatSession)
                     .createdData(LocalDateTime.now())
@@ -532,8 +532,8 @@ public class ProblemSessionService {
             ChatSession session = problem.getChatSession();
             if (session == null) return false;
 
-            if (session.getUser() != null) {
-                return session.getUser().getUuid().equals(userId);
+            if (session.getAppUsers() != null) {
+                return session.getAppUsers().getUuid().equals(userId);
             }
 
             return true;
@@ -544,7 +544,7 @@ public class ProblemSessionService {
     }
 
     // Helper methods
-    private User findUserWithValidation(UUID userUuid) {
+    private AppUsers findUserWithValidation(UUID userUuid) {
         if (userUuid == null) {
             throw new RuntimeException("사용자 UUID가 null입니다.");
         }
@@ -562,12 +562,12 @@ public class ProblemSessionService {
 
     public UUID createTestUserIfNotExists(String testEmail) {
         try {
-            Optional<User> existingUser = userRepository.findByEmail(testEmail);
+            Optional<AppUsers> existingUser = userRepository.findByEmail(testEmail);
             if (existingUser.isPresent()) {
                 return existingUser.get().getUuid();
             }
 
-            User testUser = User.builder()
+            AppUsers testAppUsers = AppUsers.builder()
                     .email(testEmail)
                     .password("test123")
                     .nickname("테스트사용자")
@@ -575,8 +575,8 @@ public class ProblemSessionService {
                     .createdAt(LocalDateTime.now())
                     .build();
 
-            User savedUser = userRepository.save(testUser);
-            return savedUser.getUuid();
+            AppUsers savedAppUsers = userRepository.save(testAppUsers);
+            return savedAppUsers.getUuid();
 
         } catch (Exception e) {
             log.error("테스트 사용자 생성 실패", e);
@@ -591,11 +591,11 @@ public class ProblemSessionService {
                 return existingSubject.get().getUuid();
             }
 
-            User user = userRepository.findById(userUuid)
+            AppUsers appUsers = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
             Subject testSubject = Subject.builder()
-                    .user(user)
+                    .appUsers(appUsers)
                     .title(subjectTitle)
                     .createdAt(LocalDateTime.now())
                     .build();

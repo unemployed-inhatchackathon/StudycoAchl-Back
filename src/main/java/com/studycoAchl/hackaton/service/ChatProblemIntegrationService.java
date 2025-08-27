@@ -41,7 +41,7 @@ public class ChatProblemIntegrationService {
 
             // 3. 키워드 기반 문제 생성
             Map<String, Object> problemResult = problemGenerationService.generateProblemsFromChatSession(
-                    chatSession.getUser().getUuid(),
+                    chatSession.getAppUsers().getUuid(),
                     chatSession.getSubject().getUuid(),
                     chatSessionId,
                     questionCount

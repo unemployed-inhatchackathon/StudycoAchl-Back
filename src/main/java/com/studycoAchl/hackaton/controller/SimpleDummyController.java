@@ -1,6 +1,6 @@
 package com.studycoAchl.hackaton.controller;
 
-import com.studycoAchl.hackaton.entity.User;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.Subject;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.repository.UserRepository;
@@ -16,7 +16,6 @@ import java.util.ArrayList;
 
 import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/simple-dummy")
@@ -40,20 +39,20 @@ public class SimpleDummyController {
             chatSessionRepository.deleteAll();
 
             // 1. User 생성
-            User user = User.builder()
+            AppUsers appUsers = AppUsers.builder()
                     .email("simple@test.com")
                     .password("password")
                     .nickname("간단테스트")
                     .createdAt(LocalDateTime.now())
                     .build();
 
-            User savedUser = userRepository.save(user);
-            log.info("사용자 생성 완료: {}", savedUser.getUuid());
+            AppUsers savedAppUsers = userRepository.save(appUsers);
+            log.info("사용자 생성 완료: {}", savedAppUsers.getUuid());
 
             // 2. Subject 생성
             Subject subject = Subject.builder()
                     .title("테스트과목")
-                    .user(savedUser)
+                    .appUsers(savedAppUsers)
                     .createdAt(LocalDateTime.now())
                     .build();
 
@@ -63,7 +62,7 @@ public class SimpleDummyController {
             // 3. ChatSession 생성
             ChatSession chatSession = ChatSession.builder()
                     .title("테스트채팅")
-                    .user(savedUser)
+                    .appUsers(savedAppUsers)
                     .subject(savedSubject)
                     .status(ChatSession.SessionStatus.ACTIVE)
                     .createdData(LocalDateTime.now())
@@ -76,7 +75,7 @@ public class SimpleDummyController {
             return Map.of(
                     "success", true,
                     "message", "간단한 테스트 데이터 생성 성공!",
-                    "userUuid", savedUser.getUuid().toString(),
+                    "userUuid", savedAppUsers.getUuid().toString(),
                     "subjectUuid", savedSubject.getUuid().toString(),
                     "chatSessionUuid", savedChatSession.getUuid().toString()
             );
