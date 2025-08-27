@@ -19,9 +19,9 @@ public interface UserAnswerRepository extends JpaRepository<UserAnswer, UUID> {
     List<UserAnswer> findByQuizResult_UuidAndIsCorrect(UUID quizResultUuid, Boolean isCorrect);
 
     // 틀린 답안들만 조회 (오답노트용)
-    @Query("SELECT ua FROM UserAnswer ua WHERE ua.quizResult.user.uuid = :userUuid AND ua.isCorrect = false")
+    @Query("SELECT ua FROM UserAnswer ua WHERE ua.quizResult.appUsers.uuid = :userUuid AND ua.isCorrect = false")
     List<UserAnswer> findWrongAnswersByUser(@Param("userUuid") UUID userUuid);
 
-    @Query("SELECT ua FROM UserAnswer ua WHERE ua.quizResult.user.uuid = :userUuid AND ua.quizResult.subject.uuid = :subjectUuid AND ua.isCorrect = false")
+    @Query("SELECT ua FROM UserAnswer ua WHERE ua.quizResult.appUsers.uuid = :userUuid AND ua.quizResult.subject.uuid = :subjectUuid AND ua.isCorrect = false")
     List<UserAnswer> findWrongAnswersByUserAndSubject(@Param("userUuid") UUID userUuid, @Param("subjectUuid") UUID subjectUuid);
 }

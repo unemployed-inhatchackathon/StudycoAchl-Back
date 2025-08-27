@@ -20,10 +20,10 @@ public interface WrongAnswerNoteRepository extends JpaRepository<WrongAnswerNote
     List<WrongAnswerNote> findByUser_UuidAndIsMastered(UUID userUuid, Boolean isMastered);
 
     // 복습이 필요한 노트들
-    @Query("SELECT wan FROM WrongAnswerNote wan WHERE wan.user.uuid = :userUuid AND wan.isMastered = false")
+    @Query("SELECT wan FROM WrongAnswerNote wan WHERE wan.appUsers.uuid = :userUuid AND wan.isMastered = false")
     List<WrongAnswerNote> findNotMasteredByUser(@Param("userUuid") UUID userUuid);
 
-    @Query("SELECT wan FROM WrongAnswerNote wan WHERE wan.user.uuid = :userUuid AND wan.subject.uuid = :subjectUuid AND wan.isMastered = false")
+    @Query("SELECT wan FROM WrongAnswerNote wan WHERE wan.appUsers.uuid = :userUuid AND wan.subject.uuid = :subjectUuid AND wan.isMastered = false")
     List<WrongAnswerNote> findNotMasteredByUserAndSubject(@Param("userUuid") UUID userUuid, @Param("subjectUuid") UUID subjectUuid);
 
     // 키워드별 조회

@@ -25,9 +25,9 @@ public interface QuizResultRepository extends JpaRepository<QuizResult, UUID> {
     List<QuizResult> findByUser_UuidOrderByCompletedAtDesc(UUID userUuid);
 
     // 통계 쿼리
-    @Query("SELECT AVG(qr.score) FROM QuizResult qr WHERE qr.user.uuid = :userUuid AND qr.status = 'COMPLETED'")
+    @Query("SELECT AVG(qr.score) FROM QuizResult qr WHERE qr.appUsers.uuid = :userUuid AND qr.status = 'COMPLETED'")
     Double getAverageScoreByUser(@Param("userUuid") UUID userUuid);
 
-    @Query("SELECT COUNT(qr) FROM QuizResult qr WHERE qr.user.uuid = :userUuid AND qr.status = 'COMPLETED'")
+    @Query("SELECT COUNT(qr) FROM QuizResult qr WHERE qr.appUsers.uuid = :userUuid AND qr.status = 'COMPLETED'")
     Long countCompletedQuizzesByUser(@Param("userUuid") UUID userUuid);
 }

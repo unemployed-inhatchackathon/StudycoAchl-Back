@@ -45,12 +45,12 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     List<ChatSession> findSessionsWithProblems();
 
     // 사용자별 문제 생성된 세션들
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.user.uuid = :userUuid AND cs.generatedProblemCount > 0")
+    @Query("SELECT cs FROM ChatSession cs WHERE cs.appUsers.uuid = :userUuid AND cs.generatedProblemCount > 0")
     List<ChatSession> findSessionsWithProblemsByUser(@Param("userUuid") UUID userUuid);
 
     @Query("SELECT cs FROM ChatSession cs " +
             "LEFT JOIN FETCH cs.subject " +
-            "LEFT JOIN FETCH cs.user " +
+            "LEFT JOIN FETCH cs.appUsers " +
             "LEFT JOIN FETCH cs.problems " +
             "WHERE cs.uuid = :uuid")
     Optional<ChatSession> findByIdWithAllRelations(@Param("uuid") UUID uuid);
