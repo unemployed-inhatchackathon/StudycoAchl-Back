@@ -34,7 +34,7 @@ public class SubjectService {
         }
 
         Subject subject = Subject.builder()
-                .userUuid(user.getUuid())
+                .userUuid(userUuid)
                 .title(title.trim())
                 .build();
 
