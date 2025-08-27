@@ -45,7 +45,7 @@ public class SubjectController {
     /**
      * 사용자별 과목 목록 조회
      */
-    @GetMapping("/users/{userUuid}subjects")
+    @GetMapping("/users/{userUuid}/subjects")
     public ResponseEntity<ApiResponse<List<Subject>>> getUserSubjects(@PathVariable UUID userUuid) {
         try {
             List<Subject> subjects = subjectService.getUserSubjects(userUuid);

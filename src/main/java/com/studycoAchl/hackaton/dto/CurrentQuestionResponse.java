@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
@@ -24,11 +23,5 @@ public class CurrentQuestionResponse {
     private int totalQuestions;          // 전체 문제 수
 
     // ========== 메타 정보 ==========
-    private String difficulty;           // 난이도
     private String category;             // 카테고리 (과목명)
-    private Integer timeLimit;           // 시간 제한 (초)
-    private Boolean hasHint;             // 힌트 존재 여부
-
-    // ========== 세션 정보 ==========
-    private LocalDateTime questionStartTime; // 문제 시작 시간
 }

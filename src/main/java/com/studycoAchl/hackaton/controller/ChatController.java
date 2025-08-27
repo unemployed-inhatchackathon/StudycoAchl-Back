@@ -24,9 +24,10 @@ public class ChatController {
 
     private final ChatSessionService chatSessionService;
     private final AiService aiService;
-    // KeywordExtractionService 제거 - 직접 AiService 사용
 
-    // === 교육적 내용 판단 헬퍼 메소드 ===
+    /**
+     * 교육적 내용 판단 헬퍼 메소드
+     */
     private boolean isEducationalContent(String content) {
         if (content == null || content.trim().length() < 5) {
             return false;
@@ -50,9 +51,15 @@ public class ChatController {
         return content.contains("?") || content.contains("？");
     }
 
-    // === 키워드 추출 및 저장 헬퍼 메소드 ===
+    /**
+     * 키워드 추출 및 저장 헬퍼 메소드 - 안전한 처리
+     */
     private void extractAndSaveKeywords(UUID sessionUuid, String content, String subjectName) {
         try {
+            if (content == null || content.trim().isEmpty()) {
+                return;
+            }
+
             // AiService를 직접 사용해서 키워드 추출
             String extractedKeywords = aiService.extractKeywords(content, subjectName);
 
@@ -70,7 +77,7 @@ public class ChatController {
                 log.debug("키워드 추출 완료 - sessionUuid: {}, keywords: {}", sessionUuid, extractedKeywords);
             }
         } catch (Exception e) {
-            log.warn("키워드 추출 중 오류 - sessionUuid: {}", sessionUuid, e);
+            log.warn("키워드 추출 중 오류 (계속 진행) - sessionUuid: {}", sessionUuid, e);
         }
     }
 
@@ -78,13 +85,14 @@ public class ChatController {
      * 사용자별 채팅 세션 목록 조회
      */
     @GetMapping("/users/{userUuid}/sessions")
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<ChatSession>>> getUserSessions(@PathVariable UUID userUuid) {
         try {
             List<ChatSession> sessions = chatSessionService.findByUser(userUuid);
             return ResponseEntity.ok(ApiResponse.success(sessions, "채팅 세션 목록을 조회했습니다."));
         } catch (Exception e) {
             log.error("사용자 세션 조회 실패 - userUuid: {}", userUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("세션 목록 조회에 실패했습니다."));
+            return ResponseEntity.ok(ApiResponse.error("세션 목록 조회에 실패했습니다: " + e.getMessage()));
         }
     }
 
@@ -92,13 +100,18 @@ public class ChatController {
      * 채팅 세션 생성
      */
     @PostMapping(value = "/users/{userUuid}/subjects/{subjectUuid}/sessions", consumes = "text/plain")
+    @Transactional
     public ResponseEntity<ApiResponse<ChatSession>> createSession(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid,
             @RequestBody String title) {
 
         try {
-            ChatSession createdSession = chatSessionService.createChatSession(userUuid, subjectUuid, title);
+            if (title == null || title.trim().isEmpty()) {
+                return ResponseEntity.ok(ApiResponse.error("세션 제목은 필수입니다."));
+            }
+
+            ChatSession createdSession = chatSessionService.createChatSession(userUuid, subjectUuid, title.trim());
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(ApiResponse.success(createdSession, "채팅 세션이 생성되었습니다."));
         } catch (Exception e) {
@@ -111,14 +124,14 @@ public class ChatController {
      * 채팅 세션 상세 조회
      */
     @GetMapping("/sessions/detail/{sessionUuid}")
-    @Transactional(readOnly = true) // 읽기 전용 트랜잭션 추가
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<ChatSession>> getSessionDetail(@PathVariable UUID sessionUuid) {
         try {
             ChatSession session = chatSessionService.findById(sessionUuid);
             return ResponseEntity.ok(ApiResponse.success(session, "채팅 세션을 조회했습니다."));
         } catch (Exception e) {
             log.error("세션 상세 조회 실패 - sessionUuid: {}", sessionUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("세션을 찾을 수 없습니다."));
+            return ResponseEntity.ok(ApiResponse.error("세션을 찾을 수 없습니다: " + e.getMessage()));
         }
     }
 
@@ -126,53 +139,67 @@ public class ChatController {
      * 메시지 전송 및 AI 응답 생성 - 자동 키워드 추출 추가
      */
     @PostMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions/{sessionUuid}/messages")
-    @Transactional // 🎯 이것이 핵심! 트랜잭션 추가
+    @Transactional
     public ResponseEntity<ApiResponse<ChatSession>> addMessage(
+            @PathVariable UUID userUuid,
+            @PathVariable UUID subjectUuid,
             @PathVariable UUID sessionUuid,
             @RequestBody MessageRequest messageRequest) {
 
         try {
+            // 입력 검증
+            if (messageRequest == null || messageRequest.getContent() == null || messageRequest.getContent().trim().isEmpty()) {
+                return ResponseEntity.ok(ApiResponse.error("메시지 내용은 필수입니다."));
+            }
+
+            if (messageRequest.getSender() == null || messageRequest.getSender().trim().isEmpty()) {
+                return ResponseEntity.ok(ApiResponse.error("발신자 정보는 필수입니다."));
+            }
+
             ChatSession session = chatSessionService.findById(sessionUuid);
 
             // 1. 사용자 메시지 추가 (교육적 내용 판단)
             boolean isEducational = isEducationalContent(messageRequest.getContent());
-            ChatMessage userMessage = new ChatMessage(
-                    UUID.randomUUID().toString(),
-                    messageRequest.getSender(),
-                    messageRequest.getContent(),
-                    LocalDateTime.now(),
-                    isEducational
-            );
 
-            session.addMessage(messageRequest.getSender(), messageRequest.getContent());
+            session.addMessage(messageRequest.getSender().toUpperCase(), messageRequest.getContent().trim());
 
             // 2. 사용자 메시지면 AI 응답 생성
-            if ("USER".equalsIgnoreCase(messageRequest.getSender())) {
+            if ("USER".equalsIgnoreCase(messageRequest.getSender().trim())) {
                 try {
-                    String subjectName = session.getSubject().getTitle();
+                    String subjectName = session.getSubject() != null ?
+                            session.getSubject().getTitle() : "일반학습";
 
-                    // AI 응답 생성
-                    String aiResponse = aiService.generateResponse(messageRequest.getContent(), subjectName);
+                    // AI 응답 생성 - null 안전성 추가
+                    String aiResponse = null;
+                    try {
+                        aiResponse = aiService.generateResponse(messageRequest.getContent(), subjectName);
+                    } catch (Exception aiError) {
+                        log.error("AI 응답 생성 중 오류", aiError);
+                        aiResponse = "죄송합니다. 현재 AI 서비스에 문제가 있습니다. 잠시 후 다시 시도해주세요.";
+                    }
 
-                    // AI 메시지 추가 (AI 응답도 교육적 내용으로 간주)
-                    session.addMessage("AI", aiResponse);
+                    // AI 메시지 추가
+                    if (aiResponse != null && !aiResponse.trim().isEmpty()) {
+                        session.addMessage("AI", aiResponse);
+                        log.info("AI 응답 생성 완료 - sessionUuid: {}", sessionUuid);
 
-                    log.info("AI 응답 생성 완료 - sessionUuid: {}", sessionUuid);
+                        // 3. 자동 키워드 추출 (사용자 메시지와 AI 응답 모두 분석)
+                        if (isEducational) {
+                            try {
+                                // 사용자 메시지에서 키워드 추출
+                                extractAndSaveKeywords(sessionUuid, messageRequest.getContent(), subjectName);
 
-                    // 🔥 3. 자동 키워드 추출 (사용자 메시지와 AI 응답 모두 분석)
-                    if (isEducational) {
-                        try {
-                            // 사용자 메시지에서 키워드 추출
-                            extractAndSaveKeywords(sessionUuid, messageRequest.getContent(), subjectName);
+                                // AI 응답에서도 키워드 추출
+                                extractAndSaveKeywords(sessionUuid, aiResponse, subjectName);
 
-                            // AI 응답에서도 키워드 추출
-                            extractAndSaveKeywords(sessionUuid, aiResponse, subjectName);
-
-                            log.info("자동 키워드 추출 완료 - sessionUuid: {}", sessionUuid);
-                        } catch (Exception keywordError) {
-                            log.warn("키워드 추출 실패 (계속 진행) - sessionUuid: {}", sessionUuid, keywordError);
-                            // 키워드 추출 실패해도 채팅은 계속 진행
+                                log.debug("자동 키워드 추출 완료 - sessionUuid: {}", sessionUuid);
+                            } catch (Exception keywordError) {
+                                log.warn("키워드 추출 실패 (계속 진행) - sessionUuid: {}", sessionUuid, keywordError);
+                                // 키워드 추출 실패해도 채팅은 계속 진행
+                            }
                         }
+                    } else {
+                        session.addMessage("AI", "응답을 생성할 수 없습니다.");
                     }
 
                 } catch (Exception e) {
@@ -195,14 +222,23 @@ public class ChatController {
      * 세션 제목 수정
      */
     @PutMapping("/sessions/{sessionUuid}")
-    @Transactional // 트랜잭션 추가
+    @Transactional
     public ResponseEntity<ApiResponse<ChatSession>> updateSessionTitle(
             @PathVariable UUID sessionUuid,
             @RequestBody Map<String, String> request) {
 
         try {
+            String newTitle = request.get("title");
+            if (newTitle == null || newTitle.trim().isEmpty()) {
+                return ResponseEntity.ok(ApiResponse.error("새 제목은 필수입니다."));
+            }
+
+            if (newTitle.length() > 100) {
+                return ResponseEntity.ok(ApiResponse.error("제목은 100자를 초과할 수 없습니다."));
+            }
+
             ChatSession session = chatSessionService.findById(sessionUuid);
-            session.setTitle(request.get("title"));
+            session.setTitle(newTitle.trim());
 
             ChatSession updatedSession = chatSessionService.save(session);
             return ResponseEntity.ok(ApiResponse.success(updatedSession, "세션 제목이 수정되었습니다."));
@@ -217,6 +253,7 @@ public class ChatController {
      * 채팅 세션 삭제
      */
     @DeleteMapping("/sessions/{sessionUuid}")
+    @Transactional
     public ResponseEntity<ApiResponse<String>> deleteSession(@PathVariable UUID sessionUuid) {
         try {
             chatSessionService.deleteSession(sessionUuid);
@@ -232,7 +269,7 @@ public class ChatController {
      * 과목별 세션 조회
      */
     @GetMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions")
-    @Transactional(readOnly = true) // 읽기 전용 트랜잭션 추가
+    @Transactional(readOnly = true)
     public ResponseEntity<ApiResponse<List<ChatSession>>> getSessionsBySubject(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid) {
@@ -243,7 +280,7 @@ public class ChatController {
 
         } catch (Exception e) {
             log.error("과목별 세션 조회 실패 - userUuid: {}, subjectUuid: {}", userUuid, subjectUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("과목별 세션 조회에 실패했습니다."));
+            return ResponseEntity.ok(ApiResponse.error("과목별 세션 조회에 실패했습니다: " + e.getMessage()));
         }
     }
 
@@ -255,8 +292,82 @@ public class ChatController {
         Map<String, Object> testData = Map.of(
                 "status", "연결 성공",
                 "service", "채팅 API",
-                "timestamp", LocalDateTime.now()
+                "timestamp", LocalDateTime.now(),
+                "version", "1.0.0"
         );
         return ResponseEntity.ok(ApiResponse.success(testData, "채팅 API 연결 성공!"));
+    }
+
+    /**
+     * 세션 키워드 조회 (디버깅용)
+     */
+    @GetMapping("/sessions/{sessionUuid}/keywords")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSessionKeywords(@PathVariable UUID sessionUuid) {
+        try {
+            List<String> keywords = chatSessionService.getExtractedKeywords(sessionUuid);
+            boolean canGenerateProblems = chatSessionService.canGenerateProblems(sessionUuid);
+
+            Map<String, Object> keywordInfo = new HashMap<>();
+            keywordInfo.put("sessionUuid", sessionUuid);
+            keywordInfo.put("keywords", keywords);
+            keywordInfo.put("keywordCount", keywords.size());
+            keywordInfo.put("canGenerateProblems", canGenerateProblems);
+            keywordInfo.put("minKeywordsRequired", 3);
+
+            return ResponseEntity.ok(ApiResponse.success(keywordInfo, "세션 키워드 정보를 조회했습니다."));
+
+        } catch (Exception e) {
+            log.error("세션 키워드 조회 실패 - sessionUuid: {}", sessionUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("키워드 조회에 실패했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 활성 세션 조회
+     */
+    @GetMapping("/users/{userUuid}/active-sessions")
+    @Transactional(readOnly = true)
+    public ResponseEntity<ApiResponse<List<ChatSession>>> getActiveSessions(@PathVariable UUID userUuid) {
+        try {
+            List<ChatSession> activeSessions = chatSessionService.findActiveSessionsByUser(userUuid);
+            return ResponseEntity.ok(ApiResponse.success(activeSessions, "활성 세션 목록을 조회했습니다."));
+
+        } catch (Exception e) {
+            log.error("활성 세션 조회 실패 - userUuid: {}", userUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("활성 세션 조회에 실패했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 세션 일시정지
+     */
+    @PostMapping("/sessions/{sessionUuid}/pause")
+    @Transactional
+    public ResponseEntity<ApiResponse<ChatSession>> pauseSession(@PathVariable UUID sessionUuid) {
+        try {
+            ChatSession pausedSession = chatSessionService.pauseSession(sessionUuid);
+            return ResponseEntity.ok(ApiResponse.success(pausedSession, "세션이 일시정지되었습니다."));
+
+        } catch (Exception e) {
+            log.error("세션 일시정지 실패 - sessionUuid: {}", sessionUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("세션 일시정지에 실패했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 세션 재개
+     */
+    @PostMapping("/sessions/{sessionUuid}/resume")
+    @Transactional
+    public ResponseEntity<ApiResponse<ChatSession>> resumeSession(@PathVariable UUID sessionUuid) {
+        try {
+            ChatSession resumedSession = chatSessionService.updateSessionStatus(sessionUuid, ChatSession.SessionStatus.ACTIVE);
+            return ResponseEntity.ok(ApiResponse.success(resumedSession, "세션이 재개되었습니다."));
+
+        } catch (Exception e) {
+            log.error("세션 재개 실패 - sessionUuid: {}", sessionUuid, e);
+            return ResponseEntity.ok(ApiResponse.error("세션 재개에 실패했습니다: " + e.getMessage()));
+        }
     }
 }
