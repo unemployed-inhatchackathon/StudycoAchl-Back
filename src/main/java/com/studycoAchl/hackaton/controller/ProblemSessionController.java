@@ -385,31 +385,4 @@ public class ProblemSessionController {
             return ResponseEntity.ok(ApiResponse.error("시스템 상태 확인 실패: " + e.getMessage()));
         }
     }
-
-    /**
-     * OpenAI 연결 테스트
-     */
-    @GetMapping("/test-ai")
-    public ResponseEntity<ApiResponse<Map<String, Object>>> testAI() {
-        try {
-            log.info("OpenAI 연결 테스트 시작");
-
-            UUID testUserId = sessionService.createTestUserIfNotExists("openai-test@example.com");
-            UUID testSubjectId = sessionService.createTestSubjectIfNotExists(testUserId, "OpenAI테스트과목");
-
-            Map<String, Object> result = problemGenerationService.generateProblemsFromKeywords(
-                    testUserId, testSubjectId,
-                    Arrays.asList("테스트"), "OpenAI 연결 테스트", 1);
-
-            if ((boolean) result.get("success")) {
-                return ResponseEntity.ok(ApiResponse.success(result, "OpenAI 연결 성공!"));
-            } else {
-                return ResponseEntity.ok(ApiResponse.error("OpenAI 연결 실패: " + result.get("error")));
-            }
-
-        } catch (Exception e) {
-            log.error("OpenAI 테스트 실패", e);
-            return ResponseEntity.ok(ApiResponse.error("OpenAI 테스트 실패: " + e.getMessage()));
-        }
-    }
 }

@@ -1,7 +1,7 @@
 package com.studycoAchl.hackaton.service;
 
-import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.Subject;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
 import com.studycoAchl.hackaton.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -20,39 +20,38 @@ public class SubjectService {
     private final UserRepository userRepository;
 
     // ========== 과목 생성 및 관리 ==========
-
     public Subject createSubject(UUID userUuid, String title) {
         validateSubjectTitle(title);
 
-        AppUsers appUsers = userRepository.findById(userUuid)
+        // 사용자 존재 여부 검증
+        AppUsers user = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
-        // 중복 체크 (필드명 수정: name → title)
-        if (subjectRepository.existsByUser_UuidAndTitle(userUuid, title)) {
+        // 중복 체크
+        if (subjectRepository.existsByUserUuidAndTitle(userUuid, title)) {
             throw new IllegalArgumentException("이미 존재하는 과목명입니다.");
         }
 
         Subject subject = Subject.builder()
-                .appUsers(appUsers)
+                .userUuid(user.getUuid())
                 .title(title.trim())
                 .build();
 
         return subjectRepository.save(subject);
     }
 
-    // ========== 조회 메소드들 ==========
-
+    // ========== 조회 ==========
     public Subject findById(UUID subjectUuid) {
         return subjectRepository.findById(subjectUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 과목입니다."));
     }
 
     public List<Subject> getUserSubjects(UUID userUuid) {
-        return subjectRepository.findByUser_Uuid(userUuid);
+        return subjectRepository.findByUserUuid(userUuid);
     }
 
     public List<Subject> getUserSubjectsOrderByCreated(UUID userUuid) {
-        return subjectRepository.findByUser_UuidOrderByCreatedAtDesc(userUuid);
+        return subjectRepository.findByUserUuidOrderByCreatedAtDesc(userUuid);
     }
 
     public List<Subject> searchSubjectsByTitle(String title) {
@@ -60,17 +59,15 @@ public class SubjectService {
     }
 
     // ========== 존재 여부 확인 ==========
-
     public boolean subjectExists(UUID subjectUuid) {
         return subjectRepository.existsById(subjectUuid);
     }
 
     public boolean subjectExistsByUserAndTitle(UUID userUuid, String title) {
-        return subjectRepository.existsByUser_UuidAndTitle(userUuid, title);
+        return subjectRepository.existsByUserUuidAndTitle(userUuid, title);
     }
 
     // ========== 수정 및 삭제 ==========
-
     public Subject updateSubjectTitle(UUID subjectUuid, String newTitle) {
         validateSubjectTitle(newTitle);
 
@@ -78,7 +75,7 @@ public class SubjectService {
 
         // 같은 사용자의 다른 과목과 중복되는지 확인
         if (!subject.getTitle().equals(newTitle) &&
-                subjectExistsByUserAndTitle(subject.getAppUsers().getUuid(), newTitle)) {
+                subjectExistsByUserAndTitle(subject.getUserUuid(), newTitle)) {
             throw new IllegalArgumentException("이미 존재하는 과목명입니다.");
         }
 
@@ -91,8 +88,7 @@ public class SubjectService {
         subjectRepository.delete(subject);
     }
 
-    // ========== 검증 메소드 ==========
-
+    // ========== 검증 ==========
     private void validateSubjectTitle(String title) {
         if (title == null || title.trim().isEmpty()) {
             throw new IllegalArgumentException("과목명은 필수입니다.");

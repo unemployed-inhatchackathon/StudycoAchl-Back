@@ -159,7 +159,7 @@ public class ProblemGenerationService {
     public Problem generateProblemFromKeywords(String extractedKeywords, String subjectTitle, AppUsers appUsers, UUID chatSessionUuid) {
         try {
             // 과목 조회
-            Subject subject = subjectRepository.findByUser_UuidAndTitle(appUsers.getUuid(), subjectTitle)
+            Subject subject = subjectRepository.findByUserUuidAndTitle(appUsers.getUuid(), subjectTitle)
                     .orElseThrow(() -> new RuntimeException("과목을 찾을 수 없습니다: " + subjectTitle));
 
             // 채팅 세션 조회 (있는 경우)

@@ -17,6 +17,7 @@ public interface SubjectRepository extends JpaRepository<Subject, UUID> {
     // 제목 검색
     List<Subject> findByTitleContaining(String title);
 
+
     // 사용자 UUID + 제목으로 단일 과목 조회
     Optional<Subject> findByUserUuidAndTitle(UUID userUuid, String title);
 

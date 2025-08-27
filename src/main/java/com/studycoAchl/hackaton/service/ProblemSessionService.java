@@ -583,29 +583,4 @@ public class ProblemSessionService {
             throw new RuntimeException("테스트 사용자 생성에 실패했습니다: " + e.getMessage());
         }
     }
-
-    public UUID createTestSubjectIfNotExists(UUID userUuid, String subjectTitle) {
-        try {
-            Optional<Subject> existingSubject = subjectRepository.findByUser_UuidAndTitle(userUuid, subjectTitle);
-            if (existingSubject.isPresent()) {
-                return existingSubject.get().getUuid();
-            }
-
-            AppUsers appUsers = userRepository.findById(userUuid)
-                    .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
-
-            Subject testSubject = Subject.builder()
-                    .appUsers(appUsers)
-                    .title(subjectTitle)
-                    .createdAt(LocalDateTime.now())
-                    .build();
-
-            Subject savedSubject = subjectRepository.save(testSubject);
-            return savedSubject.getUuid();
-
-        } catch (Exception e) {
-            log.error("테스트 과목 생성 실패", e);
-            throw new RuntimeException("테스트 과목 생성에 실패했습니다: " + e.getMessage());
-        }
-    }
 }
