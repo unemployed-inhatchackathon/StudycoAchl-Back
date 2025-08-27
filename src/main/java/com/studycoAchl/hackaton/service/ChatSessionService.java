@@ -2,7 +2,7 @@ package com.studycoAchl.hackaton.service;
 
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.app_users;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
 import com.studycoAchl.hackaton.repository.UserRepository;
@@ -29,7 +29,7 @@ public class ChatSessionService {
     public ChatSession createChatSession(UUID userUuid, UUID subjectUuid, String title) {
         validateTitle(title);
 
-        app_users user = userRepository.findById(userUuid)
+        AppUsers user = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
         Subject subject = subjectRepository.findById(subjectUuid)

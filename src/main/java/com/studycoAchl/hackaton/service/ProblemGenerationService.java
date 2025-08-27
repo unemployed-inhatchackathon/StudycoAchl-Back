@@ -2,7 +2,7 @@ package com.studycoAchl.hackaton.service;
 
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.ChatSession;
-import com.studycoAchl.hackaton.entity.app_users;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.Subject;
 import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
@@ -39,7 +39,7 @@ public class ProblemGenerationService {
             log.info("키워드 기반 문제 생성 시작 - keywords: {}, count: {}", keywords, questionCount);
 
             // 사용자와 과목 조회
-            app_users user = userRepository.findById(userUuid)
+            AppUsers user = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             Subject subject = subjectRepository.findById(subjectUuid)
@@ -90,7 +90,7 @@ public class ProblemGenerationService {
             log.info("채팅 세션 기반 문제 생성 시작 - sessionId: {}, count: {}", chatSessionUuid, questionCount);
 
             // 엔티티들 조회
-            app_users user = userRepository.findById(userUuid)
+            AppUsers user = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             Subject subject = subjectRepository.findById(subjectUuid)
@@ -156,7 +156,7 @@ public class ProblemGenerationService {
     /**
      * 사용자와 과목 정보로 문제 생성
      */
-    public Problem generateProblemFromKeywords(String extractedKeywords, String subjectTitle, app_users user, UUID chatSessionUuid) {
+    public Problem generateProblemFromKeywords(String extractedKeywords, String subjectTitle, AppUsers user, UUID chatSessionUuid) {
         try {
             // 과목 조회
             Subject subject = subjectRepository.findByUserUuidAndTitle(user.getUuid(), subjectTitle)

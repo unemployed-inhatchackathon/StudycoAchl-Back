@@ -1,7 +1,7 @@
 package com.studycoAchl.hackaton.service;
 
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.app_users;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
 import com.studycoAchl.hackaton.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -24,7 +24,7 @@ public class SubjectService {
     public Subject createSubject(UUID userUuid, String title) {
         validateSubjectTitle(title);
 
-        app_users user = userRepository.findById(userUuid)
+        AppUsers user = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
 
