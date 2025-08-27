@@ -5,7 +5,7 @@ import com.studycoAchl.hackaton.dto.SessionStatusResponse;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.User;
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.ProblemRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
@@ -42,7 +42,7 @@ public class ProblemSessionService {
             log.info("문제풀이 세션 생성 시작 - title: {}, questionCount: {}", title, questionCount);
 
             // 1. 사용자와 과목 조회
-            User user = userRepository.findById(userUuid)
+            AppUsers user = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             Subject subject = subjectRepository.findById(subjectUuid)
@@ -105,7 +105,7 @@ public class ProblemSessionService {
     /**
      * 임시 문제 데이터 생성 (기존 DB 구조에 맞춰서)
      */
-    private Problem createMockProblem(ChatSession chatSession, User user, Subject subject, int questionCount) {
+    private Problem createMockProblem(ChatSession chatSession, AppUsers user, Subject subject, int questionCount) {
         try {
             // 기존 DB 구조에 맞는 문제 데이터 생성
             Map<String, Object> problemData = new HashMap<>();
@@ -210,16 +210,9 @@ public class ProblemSessionService {
 
             response.setQuestionNumber(currentQuestionIndex + 1);
             response.setTotalQuestions(questionsArray.size());
-            response.setDifficulty(currentQuestion.path("difficulty").asText("보통"));
 
             // 과목 정보 설정 (이미 fetch join으로 로드됨)
             response.setCategory(session.getSubject().getTitle());
-
-            // 시간 제한과 힌트 정보
-            response.setTimeLimit(currentQuestion.path("timeLimit").asInt(30));
-            response.setQuestionStartTime(LocalDateTime.now());
-            response.setHasHint(currentQuestion.has("hint") &&
-                    !currentQuestion.path("hint").asText().isEmpty());
 
             log.info("현재 문제 조회 완료 - sessionId: {}, questionNumber: {}",
                     sessionId, response.getQuestionNumber());
@@ -296,20 +289,15 @@ public class ProblemSessionService {
 
                 response.setStatus(metadataNode.path("status").asText("WAITING"));
                 response.setCurrentQuestionNumber(metadataNode.path("currentQuestionIndex").asInt(0) + 1);
-                response.setParticipantCount(metadataNode.path("participantCount").asInt(1));
             } else {
                 response.setStatus("WAITING");
                 response.setCurrentQuestionNumber(1);
-                response.setParticipantCount(1);
             }
         } catch (Exception e) {
             log.warn("세션 상태 파싱 실패, 기본값 사용 - sessionId: {}", sessionId);
             response.setStatus("WAITING");
             response.setCurrentQuestionNumber(1);
-            response.setParticipantCount(1);
         }
-
-        response.setStartedAt(session.getCreatedData());
 
         // 기본값 설정
         if (response.getTotalQuestions() == 0) {

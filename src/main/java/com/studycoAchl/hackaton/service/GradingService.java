@@ -40,7 +40,7 @@ public class GradingService {
             Problem problem = problemRepository.findById(problemUuid)
                     .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다: " + problemUuid));
 
-            User user = userRepository.findById(userUuid)
+            AppUsers user = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             // 2. Problem JSON에서 정답 확인 - 안전한 파싱
@@ -250,7 +250,7 @@ public class GradingService {
      * 새 QuizResult 생성
      */
     @Transactional
-    protected QuizResult createNewQuizResult(Problem problem, User user) {
+    protected QuizResult createNewQuizResult(Problem problem, AppUsers user) {
         try {
             QuizResult quizResult = QuizResult.builder()
                     .problem(problem)
@@ -288,7 +288,7 @@ public class GradingService {
             }
 
             WrongAnswerNote wrongNote = WrongAnswerNote.builder()
-                    .user(userAnswer.getQuizResult().getUser())
+                    .appusers(userAnswer.getQuizResult().getuser())
                     .subject(userAnswer.getQuizResult().getSubject())
                     .userAnswer(userAnswer)
                     .questionText(userAnswer.getQuestionText())
