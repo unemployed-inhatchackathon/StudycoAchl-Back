@@ -45,14 +45,17 @@ public class Subject {
 
     // Exams와의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Exams> exams = new ArrayList<>();
 
     // ChatSession과의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<ChatSession> chatSessions = new ArrayList<>();
 
     // Problem과의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Problem> problems = new ArrayList<>();
 
     // 생성자 (편의 메소드) - AppUsers 객체 사용하도록 수정

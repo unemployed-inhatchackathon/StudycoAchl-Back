@@ -1,6 +1,7 @@
 package com.studycoAchl.hackaton.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.studycoAchl.hackaton.dto.ChatMessage;
 import jakarta.persistence.*;
 import lombok.*;
@@ -69,6 +70,7 @@ public class ChatSession {
     private Subject subject;
 
     @OneToMany(mappedBy = "chatSession", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Problem> problems;
 
     public enum SessionStatus {
