@@ -1,5 +1,6 @@
 package com.studycoAchl.hackaton.service;
 
+import com.studycoAchl.hackaton.dto.SubjectResponseDto;
 import com.studycoAchl.hackaton.entity.Subject;
 import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
@@ -38,6 +39,15 @@ public class SubjectService {
                 .build();
 
         return subjectRepository.save(subject);
+    }
+
+    public SubjectResponseDto toResponseDto(Subject subject) {
+        return SubjectResponseDto.builder()
+                .uuid(subject.getUuid())
+                .title(subject.getTitle())
+                .createdAt(subject.getCreatedAt())
+                .userUuid(subject.getUserUuid())
+                .build();
     }
 
     // ========== 조회 ==========

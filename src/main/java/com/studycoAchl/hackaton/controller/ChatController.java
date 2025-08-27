@@ -2,6 +2,7 @@ package com.studycoAchl.hackaton.controller;
 
 import com.studycoAchl.hackaton.dto.ApiResponse;
 import com.studycoAchl.hackaton.dto.ChatMessage;
+import com.studycoAchl.hackaton.dto.ChatSessionResponseDto;
 import com.studycoAchl.hackaton.dto.MessageRequest;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.service.ChatSessionService;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/chat")
@@ -86,10 +88,13 @@ public class ChatController {
      */
     @GetMapping("/users/{userUuid}/sessions")
     @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<List<ChatSession>>> getUserSessions(@PathVariable UUID userUuid) {
+    public ResponseEntity<ApiResponse<List<ChatSessionResponseDto>>> getUserSessions(@PathVariable UUID userUuid) {
         try {
             List<ChatSession> sessions = chatSessionService.findByUser(userUuid);
-            return ResponseEntity.ok(ApiResponse.success(sessions, "채팅 세션 목록을 조회했습니다."));
+            List<ChatSessionResponseDto> response = sessions.stream()
+                    .map(chatSessionService::toResponseDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(ApiResponse.success(response, "채팅 세션 목록을 조회했습니다."));
         } catch (Exception e) {
             log.error("사용자 세션 조회 실패 - userUuid: {}", userUuid, e);
             return ResponseEntity.ok(ApiResponse.error("세션 목록 조회에 실패했습니다: " + e.getMessage()));
@@ -101,7 +106,7 @@ public class ChatController {
      */
     @PostMapping(value = "/users/{userUuid}/subjects/{subjectUuid}/sessions", consumes = "text/plain")
     @Transactional
-    public ResponseEntity<ApiResponse<ChatSession>> createSession(
+    public ResponseEntity<ApiResponse<ChatSessionResponseDto>> createSession(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid,
             @RequestBody String title) {
@@ -112,8 +117,9 @@ public class ChatController {
             }
 
             ChatSession createdSession = chatSessionService.createChatSession(userUuid, subjectUuid, title.trim());
+            ChatSessionResponseDto response = chatSessionService.toResponseDto(createdSession);
             return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(ApiResponse.success(createdSession, "채팅 세션이 생성되었습니다."));
+                    .body(ApiResponse.success(response, "채팅 세션이 생성되었습니다."));
         } catch (Exception e) {
             log.error("채팅 세션 생성 실패 - userUuid: {}, subjectUuid: {}", userUuid, subjectUuid, e);
             return ResponseEntity.ok(ApiResponse.error("채팅 세션 생성에 실패했습니다: " + e.getMessage()));
@@ -123,17 +129,18 @@ public class ChatController {
     /**
      * 채팅 세션 상세 조회
      */
-    @GetMapping("/sessions/detail/{sessionUuid}")
-    @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<ChatSession>> getSessionDetail(@PathVariable UUID sessionUuid) {
-        try {
-            ChatSession session = chatSessionService.findById(sessionUuid);
-            return ResponseEntity.ok(ApiResponse.success(session, "채팅 세션을 조회했습니다."));
-        } catch (Exception e) {
-            log.error("세션 상세 조회 실패 - sessionUuid: {}", sessionUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("세션을 찾을 수 없습니다: " + e.getMessage()));
-        }
-    }
+//    @GetMapping("/sessions/detail/{sessionUuid}")
+//    @Transactional(readOnly = true)
+//    public ResponseEntity<ApiResponse<ChatSessionResponseDto>> getSessionDetail(@PathVariable UUID sessionUuid) {
+//        try {
+//            ChatSession session = chatSessionService.findById(sessionUuid);
+//            ChatSessionResponseDto response = chatSessionService.toResponseDto(session);
+//            return ResponseEntity.ok(ApiResponse.success(response, "채팅 세션을 조회했습니다."));
+//        } catch (Exception e) {
+//            log.error("세션 상세 조회 실패 - sessionUuid: {}", sessionUuid, e);
+//            return ResponseEntity.ok(ApiResponse.error("세션을 찾을 수 없습니다: " + e.getMessage()));
+//        }
+//    }
 
     /**
      * 메시지 전송 및 AI 응답 생성 - 자동 키워드 추출 추가
@@ -270,13 +277,16 @@ public class ChatController {
      */
     @GetMapping("/users/{userUuid}/subjects/{subjectUuid}/sessions")
     @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<List<ChatSession>>> getSessionsBySubject(
+    public ResponseEntity<ApiResponse<List<ChatSessionResponseDto>>> getSessionsBySubject(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid) {
 
         try {
             List<ChatSession> sessions = chatSessionService.findByUserAndSubject(userUuid, subjectUuid);
-            return ResponseEntity.ok(ApiResponse.success(sessions, "과목별 세션 목록을 조회했습니다."));
+            List<ChatSessionResponseDto> response = sessions.stream()
+                    .map(chatSessionService::toResponseDto)
+                    .collect(Collectors.toList());
+            return ResponseEntity.ok(ApiResponse.success(response, "과목별 세션 목록을 조회했습니다."));
 
         } catch (Exception e) {
             log.error("과목별 세션 조회 실패 - userUuid: {}, subjectUuid: {}", userUuid, subjectUuid, e);
@@ -301,73 +311,26 @@ public class ChatController {
     /**
      * 세션 키워드 조회 (디버깅용)
      */
-    @GetMapping("/sessions/{sessionUuid}/keywords")
-    @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<Map<String, Object>>> getSessionKeywords(@PathVariable UUID sessionUuid) {
-        try {
-            List<String> keywords = chatSessionService.getExtractedKeywords(sessionUuid);
-            boolean canGenerateProblems = chatSessionService.canGenerateProblems(sessionUuid);
+//    @GetMapping("/sessions/{sessionUuid}/keywords")
+//    @Transactional(readOnly = true)
+//    public ResponseEntity<ApiResponse<Map<String, Object>>> getSessionKeywords(@PathVariable UUID sessionUuid) {
+//        try {
+//            List<String> keywords = chatSessionService.getExtractedKeywords(sessionUuid);
+//            boolean canGenerateProblems = chatSessionService.canGenerateProblems(sessionUuid);
+//
+//            Map<String, Object> keywordInfo = new HashMap<>();
+//            keywordInfo.put("sessionUuid", sessionUuid);
+//            keywordInfo.put("keywords", keywords);
+//            keywordInfo.put("keywordCount", keywords.size());
+//            keywordInfo.put("canGenerateProblems", canGenerateProblems);
+//            keywordInfo.put("minKeywordsRequired", 3);
+//
+//            return ResponseEntity.ok(ApiResponse.success(keywordInfo, "세션 키워드 정보를 조회했습니다."));
+//
+//        } catch (Exception e) {
+//            log.error("세션 키워드 조회 실패 - sessionUuid: {}", sessionUuid, e);
+//            return ResponseEntity.ok(ApiResponse.error("키워드 조회에 실패했습니다: " + e.getMessage()));
+//        }
+//    }
 
-            Map<String, Object> keywordInfo = new HashMap<>();
-            keywordInfo.put("sessionUuid", sessionUuid);
-            keywordInfo.put("keywords", keywords);
-            keywordInfo.put("keywordCount", keywords.size());
-            keywordInfo.put("canGenerateProblems", canGenerateProblems);
-            keywordInfo.put("minKeywordsRequired", 3);
-
-            return ResponseEntity.ok(ApiResponse.success(keywordInfo, "세션 키워드 정보를 조회했습니다."));
-
-        } catch (Exception e) {
-            log.error("세션 키워드 조회 실패 - sessionUuid: {}", sessionUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("키워드 조회에 실패했습니다: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 활성 세션 조회
-     */
-    @GetMapping("/users/{userUuid}/active-sessions")
-    @Transactional(readOnly = true)
-    public ResponseEntity<ApiResponse<List<ChatSession>>> getActiveSessions(@PathVariable UUID userUuid) {
-        try {
-            List<ChatSession> activeSessions = chatSessionService.findActiveSessionsByUser(userUuid);
-            return ResponseEntity.ok(ApiResponse.success(activeSessions, "활성 세션 목록을 조회했습니다."));
-
-        } catch (Exception e) {
-            log.error("활성 세션 조회 실패 - userUuid: {}", userUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("활성 세션 조회에 실패했습니다: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 세션 일시정지
-     */
-    @PostMapping("/sessions/{sessionUuid}/pause")
-    @Transactional
-    public ResponseEntity<ApiResponse<ChatSession>> pauseSession(@PathVariable UUID sessionUuid) {
-        try {
-            ChatSession pausedSession = chatSessionService.pauseSession(sessionUuid);
-            return ResponseEntity.ok(ApiResponse.success(pausedSession, "세션이 일시정지되었습니다."));
-
-        } catch (Exception e) {
-            log.error("세션 일시정지 실패 - sessionUuid: {}", sessionUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("세션 일시정지에 실패했습니다: " + e.getMessage()));
-        }
-    }
-
-    /**
-     * 세션 재개
-     */
-    @PostMapping("/sessions/{sessionUuid}/resume")
-    @Transactional
-    public ResponseEntity<ApiResponse<ChatSession>> resumeSession(@PathVariable UUID sessionUuid) {
-        try {
-            ChatSession resumedSession = chatSessionService.updateSessionStatus(sessionUuid, ChatSession.SessionStatus.ACTIVE);
-            return ResponseEntity.ok(ApiResponse.success(resumedSession, "세션이 재개되었습니다."));
-
-        } catch (Exception e) {
-            log.error("세션 재개 실패 - sessionUuid: {}", sessionUuid, e);
-            return ResponseEntity.ok(ApiResponse.error("세션 재개에 실패했습니다: " + e.getMessage()));
-        }
-    }
 }
