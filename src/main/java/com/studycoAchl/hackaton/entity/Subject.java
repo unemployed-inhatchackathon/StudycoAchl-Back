@@ -33,24 +33,32 @@ public class Subject {
     @Column(name = "createdAt")
     private LocalDateTime createdAt;
 
-    @Column(name = "user_uuid", columnDefinition = "BINARY(16)", nullable = false)
-    private UUID userUuid;
+    // User와의 관계
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
+    @JsonBackReference
+    private AppUsers appUsers;
+
+    // ChatSession과의 관계
+    @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    @JsonIgnore
+    @Builder.Default
+    private List<ChatSession> chatSessions = new ArrayList<>();
 
     // Exams와의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Exams> exams = new ArrayList<>();
-
-    //ChatSession과의 관계
-    @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ChatSession> chatSessions = new ArrayList<>();
 
     // Problem과의 관계
     @OneToMany(mappedBy = "subject", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Builder.Default
     private List<Problem> problems = new ArrayList<>();
 
     // 생성자 (편의 메소드)
-    public Subject(UUID user_uuid, String title) {
-        this.userUuid = user_uuid;
+    public Subject(AppUsers appUsers, String title) {
+        this.appUsers = appUsers;
         this.title = title;
         this.chatSessions = new ArrayList<>();
         this.exams = new ArrayList<>();

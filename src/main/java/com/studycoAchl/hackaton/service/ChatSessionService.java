@@ -1,8 +1,8 @@
 package com.studycoAchl.hackaton.service;
 
+import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.ChatSession;
 import com.studycoAchl.hackaton.entity.Subject;
-import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.repository.ChatSessionRepository;
 import com.studycoAchl.hackaton.repository.SubjectRepository;
 import com.studycoAchl.hackaton.repository.UserRepository;
@@ -31,14 +31,14 @@ public class ChatSessionService {
     public ChatSession createChatSession(UUID userUuid, UUID subjectUuid, String title) {
         validateTitle(title);
 
-        AppUsers user = userRepository.findById(userUuid)
+        AppUsers appUsers = userRepository.findById(userUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 사용자입니다."));
 
         Subject subject = subjectRepository.findById(subjectUuid)
                 .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 과목입니다."));
 
         ChatSession chatSession = ChatSession.builder()
-                .user(user)
+                .appUsers(appUsers)
                 .subject(subject)
                 .title(title.trim())
                 .messages(new ArrayList<>())

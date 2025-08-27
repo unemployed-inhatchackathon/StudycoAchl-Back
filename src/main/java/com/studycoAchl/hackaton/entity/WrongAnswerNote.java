@@ -25,7 +25,7 @@ public class WrongAnswerNote {
     // 연관관계
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "uuid")
-    private AppUsers appusers;
+    private AppUsers appUsers;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "subject_uuid", referencedColumnName = "uuid")

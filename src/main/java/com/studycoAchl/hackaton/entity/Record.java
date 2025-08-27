@@ -55,7 +55,7 @@ public class Record {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_uuid", referencedColumnName = "UUID")
-    private AppUsers user;
+    private AppUsers appUsers;
 
     @PrePersist
     protected void onCreate() {

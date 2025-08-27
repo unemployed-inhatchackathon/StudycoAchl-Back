@@ -40,7 +40,7 @@ public class GradingService {
             Problem problem = problemRepository.findById(problemUuid)
                     .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다: " + problemUuid));
 
-            AppUsers user = userRepository.findById(userUuid)
+            AppUsers appUsers = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             // 2. Problem JSON에서 정답 확인 - 안전한 파싱
@@ -73,7 +73,7 @@ public class GradingService {
 
             // 4. QuizResult 조회 또는 생성
             QuizResult quizResult = quizResultRepository.findByProblem_Uuid(problemUuid)
-                    .orElseGet(() -> createNewQuizResult(problem, user));
+                    .orElseGet(() -> createNewQuizResult(problem, appUsers));
 
             // 5. UserAnswer 생성 및 저장
             UserAnswer userAnswer = UserAnswer.builder()
@@ -250,11 +250,11 @@ public class GradingService {
      * 새 QuizResult 생성
      */
     @Transactional
-    protected QuizResult createNewQuizResult(Problem problem, AppUsers user) {
+    protected QuizResult createNewQuizResult(Problem problem, AppUsers appUsers) {
         try {
             QuizResult quizResult = QuizResult.builder()
                     .problem(problem)
-                    .user(user)
+                    .appUsers(appUsers)
                     .subject(problem.getSubject())
                     .status(QuizResult.ResultStatus.IN_PROGRESS)
                     .startedAt(LocalDateTime.now())
@@ -288,7 +288,7 @@ public class GradingService {
             }
 
             WrongAnswerNote wrongNote = WrongAnswerNote.builder()
-                    .appusers(userAnswer.getQuizResult().getuser())
+                    .appUsers(userAnswer.getQuizResult().getAppUsers())
                     .subject(userAnswer.getQuizResult().getSubject())
                     .userAnswer(userAnswer)
                     .questionText(userAnswer.getQuestionText())

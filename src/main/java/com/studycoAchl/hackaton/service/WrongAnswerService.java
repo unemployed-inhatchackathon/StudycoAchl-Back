@@ -85,7 +85,7 @@ public class WrongAnswerService {
         try {
             log.info("복습 퀴즈 생성 - userUuid: {}, subjectUuid: {}", userUuid, subjectUuid);
 
-            User user = userRepository.findById(userUuid)
+            AppUsers appUsers = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
             Subject subject = subjectRepository.findById(subjectUuid)
@@ -113,7 +113,7 @@ public class WrongAnswerService {
             // Problem 엔티티 생성
             Problem reviewProblem = Problem.builder()
                     .problems(reviewProblemsJson)
-                    .user(user)
+                    .appUsers(appUsers)
                     .subject(subject)
                     .chatSession(null) // 복습 문제는 채팅과 무관
                     .createdData(LocalDateTime.now())

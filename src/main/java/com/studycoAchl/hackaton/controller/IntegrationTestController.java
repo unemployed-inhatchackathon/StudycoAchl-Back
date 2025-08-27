@@ -39,10 +39,10 @@ public class IntegrationTestController {
 
             // 1단계: 테스트 데이터 생성
             log.info("1단계: 테스트 사용자 및 과목 생성");
-            User testUser = createTestUser();
-            Subject testSubject = createTestSubject(testUser);
+            AppUsers testAppUsers = createTestUser();
+            Subject testSubject = createTestSubject(testAppUsers);
             testResult.put("step1_data_creation", Map.of(
-                    "userUuid", testUser.getUuid(),
+                    "userUuid", testAppUsers.getUuid(),
                     "subjectUuid", testSubject.getUuid(),
                     "status", "성공"
             ));
@@ -50,7 +50,7 @@ public class IntegrationTestController {
             // 2단계: 키워드 기반 문제 생성
             log.info("2단계: AI 문제 생성");
             Map<String, Object> problemResult = problemGenerationService.generateProblemsFromKeywords(
-                    testUser.getUuid(),
+                    testAppUsers.getUuid(),
                     testSubject.getUuid(),
                     Arrays.asList("수학", "방정식", "계산"),
                     "통합 테스트용 수학 문제",
@@ -73,15 +73,15 @@ public class IntegrationTestController {
             List<Map<String, Object>> answerResults = new ArrayList<>();
 
             // 문제 1: 정답
-            Map<String, Object> answer1 = gradingService.submitAnswer(problemUuid, 1, 0, testUser.getUuid());
+            Map<String, Object> answer1 = gradingService.submitAnswer(problemUuid, 1, 0, testAppUsers.getUuid());
             answerResults.add(Map.of("question", 1, "result", answer1));
 
             // 문제 2: 오답 (일부러)
-            Map<String, Object> answer2 = gradingService.submitAnswer(problemUuid, 2, 2, testUser.getUuid());
+            Map<String, Object> answer2 = gradingService.submitAnswer(problemUuid, 2, 2, testAppUsers.getUuid());
             answerResults.add(Map.of("question", 2, "result", answer2));
 
             // 문제 3: 정답
-            Map<String, Object> answer3 = gradingService.submitAnswer(problemUuid, 3, 0, testUser.getUuid());
+            Map<String, Object> answer3 = gradingService.submitAnswer(problemUuid, 3, 0, testAppUsers.getUuid());
             answerResults.add(Map.of("question", 3, "result", answer3));
 
             testResult.put("step3_problem_solving", Map.of(
@@ -96,7 +96,7 @@ public class IntegrationTestController {
 
             // 5단계: 오답노트 조회
             log.info("5단계: 오답노트 확인");
-            Map<String, Object> wrongAnswers = wrongAnswerService.getUserWrongAnswers(testUser.getUuid());
+            Map<String, Object> wrongAnswers = wrongAnswerService.getUserWrongAnswers(testAppUsers.getUuid());
             testResult.put("step5_wrong_answers", Map.of(
                     "totalWrongAnswers", wrongAnswers.get("totalWrongAnswers"),
                     "notMasteredCount", wrongAnswers.get("notMasteredCount"),
@@ -106,7 +106,7 @@ public class IntegrationTestController {
             // 6단계: 복습 퀴즈 생성
             log.info("6단계: 복습 퀴즈 생성");
             Map<String, Object> reviewQuiz = wrongAnswerService.generateReviewQuiz(
-                    testUser.getUuid(),
+                    testAppUsers.getUuid(),
                     testSubject.getUuid(),
                     5
             );
@@ -144,19 +144,19 @@ public class IntegrationTestController {
             log.info("=== 채점 시스템 단독 테스트 ===");
 
             // 기존 문제 사용하거나 새로 생성
-            User testUser = createTestUser();
-            Subject testSubject = createTestSubject(testUser);
+            AppUsers testAppUsers = createTestUser();
+            Subject testSubject = createTestSubject(testAppUsers);
 
             Map<String, Object> problemResult = problemGenerationService.generateProblemsFromKeywords(
-                    testUser.getUuid(), testSubject.getUuid(),
+                    testAppUsers.getUuid(), testSubject.getUuid(),
                     Arrays.asList("채점테스트"), "채점 시스템 테스트", 2
             );
 
             UUID problemUuid = UUID.fromString(problemResult.get("problemUuid").toString());
 
             // 답안 제출 테스트
-            Map<String, Object> answer1 = gradingService.submitAnswer(problemUuid, 1, 0, testUser.getUuid());
-            Map<String, Object> answer2 = gradingService.submitAnswer(problemUuid, 2, 1, testUser.getUuid());
+            Map<String, Object> answer1 = gradingService.submitAnswer(problemUuid, 1, 0, testAppUsers.getUuid());
+            Map<String, Object> answer2 = gradingService.submitAnswer(problemUuid, 2, 1, testAppUsers.getUuid());
             Map<String, Object> completion = gradingService.completeQuiz(problemUuid);
 
             Map<String, Object> result = Map.of(
@@ -183,28 +183,28 @@ public class IntegrationTestController {
         try {
             log.info("=== 오답노트 시스템 단독 테스트 ===");
 
-            User testUser = createTestUser();
-            Subject testSubject = createTestSubject(testUser);
+            AppUsers testAppUsers = createTestUser();
+            Subject testSubject = createTestSubject(testAppUsers);
 
             // 문제 생성 및 일부러 틀리기
             Map<String, Object> problemResult = problemGenerationService.generateProblemsFromKeywords(
-                    testUser.getUuid(), testSubject.getUuid(),
+                    testAppUsers.getUuid(), testSubject.getUuid(),
                     Arrays.asList("오답노트테스트"), "오답노트 시스템 테스트", 2
             );
 
             UUID problemUuid = UUID.fromString(problemResult.get("problemUuid").toString());
 
             // 일부러 틀린 답 제출
-            gradingService.submitAnswer(problemUuid, 1, 3, testUser.getUuid()); // 틀린 답
-            gradingService.submitAnswer(problemUuid, 2, 4, testUser.getUuid()); // 틀린 답
+            gradingService.submitAnswer(problemUuid, 1, 3, testAppUsers.getUuid()); // 틀린 답
+            gradingService.submitAnswer(problemUuid, 2, 4, testAppUsers.getUuid()); // 틀린 답
             gradingService.completeQuiz(problemUuid);
 
             // 오답노트 확인
-            Map<String, Object> wrongAnswers = wrongAnswerService.getUserWrongAnswers(testUser.getUuid());
+            Map<String, Object> wrongAnswers = wrongAnswerService.getUserWrongAnswers(testAppUsers.getUuid());
 
             // 복습 퀴즈 생성
             Map<String, Object> reviewQuiz = wrongAnswerService.generateReviewQuiz(
-                    testUser.getUuid(), testSubject.getUuid(), 5
+                    testAppUsers.getUuid(), testSubject.getUuid(), 5
             );
 
             Map<String, Object> result = Map.of(
@@ -361,12 +361,12 @@ public class IntegrationTestController {
 
     // ========== Private Helper Methods ==========
 
-    private User createTestUser() {
+    private AppUsers createTestUser() {
         // 기존 테스트 사용자 있으면 삭제
         userRepository.findByEmail("integration-test@example.com")
                 .ifPresent(userRepository::delete);
 
-        User testUser = User.builder()
+        AppUsers testAppUsers = AppUsers.builder()
                 .email("integration-test@example.com")
                 .password("test123")
                 .nickname("통합테스트사용자")
@@ -374,16 +374,16 @@ public class IntegrationTestController {
                 .createdAt(LocalDateTime.now())
                 .build();
 
-        return userRepository.save(testUser);
+        return userRepository.save(testAppUsers);
     }
 
-    private Subject createTestSubject(User user) {
+    private Subject createTestSubject(AppUsers appUsers) {
         // 기존 테스트 과목 있으면 삭제
-        subjectRepository.findByUser_UuidAndTitle(user.getUuid(), "통합테스트과목")
+        subjectRepository.findByUser_UuidAndTitle(appUsers.getUuid(), "통합테스트과목")
                 .ifPresent(subjectRepository::delete);
 
         Subject testSubject = Subject.builder()
-                .user(user)
+                .appUsers(appUsers)
                 .title("통합테스트과목")
                 .createdAt(LocalDateTime.now())
                 .build();
