@@ -135,10 +135,23 @@ public class ProblemSessionService {
         Problem problem = problemRepository.findById(problemUuid)
                 .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다. ID: " + problemUuid));
 
+        // 문제풀이 세션의 메타데이터를 저장할 곳
+        JsonNode metadataNode = null;
+
+        // 문제에 연결된 채팅 세션이 있다면, 그 메타데이터를 사용
         ChatSession session = problem.getChatSession();
-        if (session == null) {
-            throw new RuntimeException("문제에 연결된 채팅 세션을 찾을 수 없습니다.");
+        if (session != null) {
+            try {
+                String metadataJson = session.getExtractedKeywords();
+                if (metadataJson != null && !metadataJson.isEmpty()) {
+                    metadataNode = objectMapper.readTree(metadataJson);
+                }
+            } catch (Exception e) {
+                log.warn("세션 메타데이터 파싱 실패, 문제 조회는 계속 진행 - problemUuid: {}", problemUuid, e);
+            }
         }
+
+        int currentQuestionIndex = (metadataNode != null) ? metadataNode.path("currentQuestionIndex").asInt(0) : 0;
 
         String problemsJson = problem.getProblems();
         if (problemsJson == null || problemsJson.isEmpty()) {
@@ -147,9 +160,8 @@ public class ProblemSessionService {
 
         try {
             JsonNode problemsNode = objectMapper.readTree(problemsJson);
-            int currentQuestionIndex = getCurrentQuestionIndex(session);
-
             JsonNode questionsArray = problemsNode.get("questions");
+
             if (questionsArray == null || !questionsArray.isArray()) {
                 throw new RuntimeException("문제 배열을 찾을 수 없습니다.");
             }
@@ -160,12 +172,10 @@ public class ProblemSessionService {
 
             JsonNode currentQuestion = questionsArray.get(currentQuestionIndex);
 
-            // 기존 DTO 필드만 사용해서 응답 생성
             CurrentQuestionResponse response = new CurrentQuestionResponse();
             response.setQuestionId(problem.getUuid() + "_" + currentQuestionIndex);
             response.setQuestionText(currentQuestion.path("question").asText());
 
-            // 선택지 파싱
             JsonNode optionsNode = currentQuestion.get("options");
             List<String> options = new ArrayList<>();
             if (optionsNode != null && optionsNode.isArray()) {
@@ -181,12 +191,6 @@ public class ProblemSessionService {
             if (problem.getSubject() != null) {
                 response.setCategory(problem.getSubject().getTitle());
             }
-
-            // 불필요한 필드 설정 제거:
-            // response.setDifficulty() - 제거됨
-            // response.setTimeLimit() - 제거됨
-            // response.setQuestionStartTime() - 제거됨
-            // response.setHasHint() - 제거됨
 
             log.info("현재 문제 조회 완료 - problemUuid: {}, questionNumber: {}",
                     problemUuid, response.getQuestionNumber());
@@ -208,57 +212,49 @@ public class ProblemSessionService {
         Problem problem = problemRepository.findById(problemUuid)
                 .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
 
+        SessionStatusResponse response = new SessionStatusResponse();
+        response.setSessionId(problemUuid.toString()); // problemUuid를 세션 ID로 사용
+
+        JsonNode metadataNode = null;
         ChatSession session = problem.getChatSession();
-        if (session == null) {
-            throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+
+        if (session != null) {
+            try {
+                String metadataJson = session.getExtractedKeywords();
+                if (metadataJson != null && !metadataJson.isEmpty()) {
+                    metadataNode = objectMapper.readTree(metadataJson);
+                }
+            } catch (Exception e) {
+                log.warn("세션 메타데이터 파싱 실패, 기본값 사용 - problemUuid: {}", problemUuid);
+            }
         }
 
-        SessionStatusResponse response = new SessionStatusResponse();
-        response.setSessionId(session.getUuid().toString());
-
-        // 문제 정보 조회
+        // 문제 정보 조회 (메타데이터가 없어도 가능)
         try {
             String problemsJson = problem.getProblems();
             if (problemsJson != null && !problemsJson.isEmpty()) {
                 JsonNode problemsNode = objectMapper.readTree(problemsJson);
                 JsonNode questionsArray = problemsNode.get("questions");
-
                 if (questionsArray != null && questionsArray.isArray()) {
                     response.setTotalQuestions(questionsArray.size());
                 }
             }
-
-            // 과목 정보
             if (problem.getSubject() != null) {
                 response.setSubjectTitle(problem.getSubject().getTitle());
             }
-
         } catch (Exception e) {
             log.warn("문제 정보 파싱 실패 - problemUuid: {}", problemUuid);
         }
 
-        // extractedKeywords에서 현재 상태 파싱
-        try {
-            String metadataJson = session.getExtractedKeywords();
-            if (metadataJson != null && !metadataJson.isEmpty()) {
-                JsonNode metadataNode = objectMapper.readTree(metadataJson);
-                response.setStatus(metadataNode.path("status").asText("WAITING"));
-                response.setCurrentQuestionNumber(metadataNode.path("currentQuestionIndex").asInt(0) + 1);
-            } else {
-                response.setStatus("WAITING");
-                response.setCurrentQuestionNumber(1);
-            }
-        } catch (Exception e) {
-            log.warn("세션 상태 파싱 실패, 기본값 사용 - problemUuid: {}", problemUuid);
+        // 상태 및 현재 문제 번호 설정
+        if (metadataNode != null) {
+            response.setStatus(metadataNode.path("status").asText("WAITING"));
+            response.setCurrentQuestionNumber(metadataNode.path("currentQuestionIndex").asInt(0) + 1);
+        } else {
             response.setStatus("WAITING");
             response.setCurrentQuestionNumber(1);
         }
 
-        // 불필요한 필드 설정 제거:
-        // response.setParticipantCount() - 제거됨
-        // response.setStartedAt() - 제거됨
-
-        // 기본값 설정
         if (response.getTotalQuestions() == 0) {
             response.setTotalQuestions(10);
         }
@@ -270,80 +266,17 @@ public class ProblemSessionService {
     }
 
     // 나머지 메소드들은 기존 코드 그대로 유지...
-
-    private int getCurrentQuestionIndex(ChatSession session) {
-        Map<String, Object> metadata = safeParseExtractedKeywords(session.getExtractedKeywords());
-        return ((Number) metadata.getOrDefault("currentQuestionIndex", 0)).intValue();
-    }
-
-    private Map<String, Object> safeParseExtractedKeywords(String extractedKeywords) {
-        Map<String, Object> result = new HashMap<>();
-
-        if (extractedKeywords == null || extractedKeywords.isEmpty()) {
-            return result;
-        }
-
-        try {
-            if (isValidJson(extractedKeywords)) {
-                JsonNode node = objectMapper.readTree(extractedKeywords);
-                return objectMapper.convertValue(node,
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {}
-                );
-            } else {
-                result.put("originalKeywords", extractedKeywords);
-                result.put("currentQuestionIndex", 0);
-                result.put("status", "WAITING");
-                return result;
-            }
-        } catch (Exception e) {
-            log.warn("JSON 파싱 실패, 기본값 반환 - content: {}", extractedKeywords, e);
-            result.put("originalKeywords", extractedKeywords);
-            result.put("currentQuestionIndex", 0);
-            result.put("status", "WAITING");
-            return result;
-        }
-    }
-
-    private boolean isValidJson(String jsonString) {
-        if (jsonString == null || jsonString.trim().isEmpty()) {
-            return false;
-        }
-        String trimmed = jsonString.trim();
-        return (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-                (trimmed.startsWith("[") && trimmed.endsWith("]"));
-    }
-
-    public void updateSessionMetadata(UUID problemUuid, Map<String, Object> updates) {
-        Problem problem = problemRepository.findById(problemUuid)
-                .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
-
-        ChatSession session = problem.getChatSession();
-        if (session == null) {
-            throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
-        }
-
-        try {
-            Map<String, Object> existingData = safeParseExtractedKeywords(session.getExtractedKeywords());
-            existingData.putAll(updates);
-
-            String updatedContent = objectMapper.writeValueAsString(existingData);
-            session.setExtractedKeywords(updatedContent);
-            session.setUpdatedAt(LocalDateTime.now());
-
-            chatSessionRepository.save(session);
-
-        } catch (Exception e) {
-            log.error("세션 메타데이터 업데이트 실패 - problemUuid: {}", problemUuid, e);
-            throw new RuntimeException("세션 메타데이터 업데이트에 실패했습니다: " + e.getMessage());
-        }
-    }
-
     public Map<String, Object> moveToNextQuestion(UUID problemUuid) {
         try {
             Problem problem = problemRepository.findById(problemUuid)
                     .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
 
             ChatSession session = problem.getChatSession();
+            // ChatSession이 null인 경우 예외 발생
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+            }
+
             String problemsJson = problem.getProblems();
 
             int currentIndex = getCurrentQuestionIndex(session);
@@ -394,6 +327,10 @@ public class ProblemSessionService {
                     .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
 
             ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+            }
+
             String problemsJson = problem.getProblems();
 
             int currentIndex = getCurrentQuestionIndex(session);
@@ -441,6 +378,9 @@ public class ProblemSessionService {
                     .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
 
             ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+            }
             session.setStatus(ChatSession.SessionStatus.COMPLETED);
 
             Map<String, Object> updates = new HashMap<>();
@@ -581,6 +521,62 @@ public class ProblemSessionService {
         } catch (Exception e) {
             log.error("테스트 사용자 생성 실패", e);
             throw new RuntimeException("테스트 사용자 생성에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    //세션의 현재 문제 인덱스를 가져오는 헬퍼 메서드
+    private int getCurrentQuestionIndex(ChatSession session) {
+        try {
+            if (session != null && session.getExtractedKeywords() != null) {
+                JsonNode metadataNode = objectMapper.readTree(session.getExtractedKeywords());
+                return metadataNode.path("currentQuestionIndex").asInt(0);
+            }
+        } catch (Exception e) {
+            log.warn("문제 인덱스 파싱 실패, 기본값 0 반환 - sessionId: {}", session.getUuid());
+        }
+        return 0;
+    }
+
+    //세션 메타데이터를 업데이트하는 헬퍼 메서드
+    public void updateSessionMetadata(UUID problemUuid, Map<String, Object> updates) {
+        try {
+            Problem problem = problemRepository.findById(problemUuid)
+                    .orElseThrow(() -> new RuntimeException("문제를 찾을 수 없습니다."));
+
+            ChatSession session = problem.getChatSession();
+            if (session == null) {
+                throw new RuntimeException("문제에 연결된 세션을 찾을 수 없습니다.");
+            }
+
+            Map<String, Object> existingData = safeParseExtractedKeywords(session.getExtractedKeywords());
+            existingData.putAll(updates);
+
+            String updatedContent = objectMapper.writeValueAsString(existingData);
+            session.setExtractedKeywords(updatedContent);
+            session.setUpdatedAt(LocalDateTime.now());
+
+            chatSessionRepository.save(session);
+
+        } catch (Exception e) {
+            log.error("세션 메타데이터 업데이트 실패 - problemUuid: {}", problemUuid, e);
+            throw new RuntimeException("세션 메타데이터 업데이트에 실패했습니다: " + e.getMessage());
+        }
+    }
+
+    //JSON 파싱을 안전하게 처리하는 헬퍼 메서드
+    private Map<String, Object> safeParseExtractedKeywords(String extractedKeywords) {
+        Map<String, Object> result = new HashMap<>();
+
+        if (extractedKeywords == null || extractedKeywords.isEmpty()) {
+            return result;
+        }
+
+        try {
+            JsonNode node = objectMapper.readTree(extractedKeywords);
+            return objectMapper.convertValue(node, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+        } catch (Exception e) {
+            log.warn("JSON 파싱 실패, 기본값 반환 - content: {}", extractedKeywords, e);
+            return result;
         }
     }
 }
