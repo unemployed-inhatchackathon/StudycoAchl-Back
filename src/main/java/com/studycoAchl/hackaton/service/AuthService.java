@@ -20,13 +20,12 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
 
     public User oAuthLogin(String accessCode, HttpServletResponse httpServletResponse) {
+
         KakaoDTO.OAuthToken oAuthToken = kakaoUtil.requestToken(accessCode);
         KakaoDTO.KakaoProfile kakaoProfile = kakaoUtil.requestProfile(oAuthToken);
         String email = kakaoProfile.getKakao_account().getEmail();
-
         User user = userRepository.findByEmail(email)
                 .orElseGet(() -> createNewUser(kakaoProfile));
-
         String token = jwtUtil.createAccessToken(user.getEmail(), "USER");
         httpServletResponse.setHeader("Authorization", token);
 
@@ -37,7 +36,8 @@ public class AuthService {
         User newUser = new User();
         newUser.setEmail(kakaoProfile.getKakao_account().getEmail());
         newUser.setUsername(kakaoProfile.getKakao_account().getProfile().getNickname());
-        newUser.setPassword(passwordEncoder.encode("defaultPassword"));
+
+        newUser.setPassword(null);
         newUser.setToken("defaultToken");
 
         return userRepository.save(newUser);

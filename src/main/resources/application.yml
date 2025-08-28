@@ -1,5 +1,5 @@
 spring:
   kakao:
     auth:
-      client: ${KAKAO_CLIENT_ID}
-      redirect: http://localhost:8080/auth/login/kakao
+      client: fec5a073c781f62263a237244fc61148
+      redirect: http://localhost:3000/auth/login/kakao
