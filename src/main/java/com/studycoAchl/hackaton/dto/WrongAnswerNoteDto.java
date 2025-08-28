@@ -29,8 +29,5 @@ public class WrongAnswerNoteDto {
     private LocalDateTime lastReviewedAt;
     private LocalDateTime createdAt;
 
-    // 표시용 정보
-    private String correctAnswerText;
-    private String userWrongAnswerText;
     private String masteryStatus; // "숙지", "복습중", "미복습"
 }
