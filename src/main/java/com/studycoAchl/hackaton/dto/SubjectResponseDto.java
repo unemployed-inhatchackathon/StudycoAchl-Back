@@ -15,6 +15,6 @@ import java.util.UUID;
 public class SubjectResponseDto {
     private UUID uuid;
     private String title;
-    private LocalDateTime createdAt;
+    private LocalDateTime created_at;
     private UUID userUuid;
 }

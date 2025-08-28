@@ -45,7 +45,7 @@ public class SubjectService {
         return SubjectResponseDto.builder()
                 .uuid(subject.getUuid())
                 .title(subject.getTitle())
-                .createdAt(subject.getCreatedAt())
+                .created_at(subject.getCreatedAt())
                 .userUuid(subject.getUserUuid())
                 .build();
     }
