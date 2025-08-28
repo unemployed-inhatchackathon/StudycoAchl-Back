@@ -52,7 +52,7 @@ public class ChatSessionService {
     public ChatSessionResponseDto toResponseDto(ChatSession chatSession) {
         return ChatSessionResponseDto.builder()
                 .uuid(chatSession.getUuid())
-                .title(chatSession.getChattitle())
+                .chatTitle(chatSession.getChatTitle())
                 .createdData(chatSession.getCreatedData())
                 .updatedAt(chatSession.getUpdatedAt())
                 .status(chatSession.getStatus().toString())

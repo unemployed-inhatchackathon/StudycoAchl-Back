@@ -45,7 +45,7 @@ public class ProblemSessionService {
             Subject subject = findSubjectWithValidation(subjectUuid);
 
             ChatSession chatSession = ChatSession.builder()
-                    .chattitle(title)
+                    .chatTitle(title)
                     .appUsers(appUsers)
                     .subject(subject)
                     .createdData(LocalDateTime.now())
