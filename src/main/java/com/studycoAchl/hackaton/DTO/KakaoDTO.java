@@ -1,4 +1,4 @@
-package com.studycoAchl.hackaton.DTO;
+package com.studycoAchl.hackaton.dto;
 
 import lombok.Getter;
 

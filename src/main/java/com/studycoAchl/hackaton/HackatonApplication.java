@@ -12,5 +12,4 @@ public class HackatonApplication {
     public static void main(String[] args) {
         SpringApplication.run(HackatonApplication.class, args);
     }
-
 }

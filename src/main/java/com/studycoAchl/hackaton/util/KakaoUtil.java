@@ -1,6 +1,6 @@
 package com.studycoAchl.hackaton.util;
 
-import com.studycoAchl.hackaton.DTO.KakaoDTO;
+import com.studycoAchl.hackaton.dto.KakaoDTO;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.*;
@@ -23,7 +23,6 @@ public class KakaoUtil {
         this.redirectUri = redirectUri;
     }
 
-    // Access Token 요청
     public KakaoDTO.OAuthToken requestToken(String code) {
         String url = "https://kauth.kakao.com/oauth/token";
         RestTemplate restTemplate = new RestTemplate();
@@ -54,14 +53,12 @@ public class KakaoUtil {
                 System.out.println("카카오 토큰 요청 실패: " + response.getStatusCode());
                 return null;
             }
-
         } catch (Exception e) {
             e.printStackTrace();
             return null;
         }
     }
 
-    // 사용자 프로필 요청
     public KakaoDTO.KakaoProfile requestProfile(KakaoDTO.OAuthToken oAuthToken) {
         RestTemplate restTemplate2 = new RestTemplate();
         HttpHeaders headers2 = new HttpHeaders();
@@ -86,7 +83,6 @@ public class KakaoUtil {
                 System.out.println("카카오 프로필 요청 실패: " + response2.getStatusCode());
                 return null;
             }
-
         } catch (JsonProcessingException e) {
             e.printStackTrace();
             return null;

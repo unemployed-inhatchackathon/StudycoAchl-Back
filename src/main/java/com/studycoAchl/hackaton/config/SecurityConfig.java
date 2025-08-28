@@ -1,4 +1,4 @@
-package com.studycoAchl.hackaton.Config;
+package com.studycoAchl.hackaton.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

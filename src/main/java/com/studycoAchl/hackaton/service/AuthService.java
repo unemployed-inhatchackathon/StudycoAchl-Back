@@ -1,7 +1,6 @@
 package com.studycoAchl.hackaton.service;
 
-import com.studycoAchl.hackaton.DTO.KakaoDTO;
-import com.studycoAchl.hackaton.Entity.User;
+import com.studycoAchl.hackaton.dto.KakaoDTO;
 import com.studycoAchl.hackaton.repository.UserRepository;
 import com.studycoAchl.hackaton.util.KakaoUtil;
 import com.studycoAchl.hackaton.util.JwtUtil;
@@ -19,27 +18,27 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
 
-    public User oAuthLogin(String accessCode, HttpServletResponse httpServletResponse) {
+    public com.studycoAchl.hackaton.entity.AppUsers oAuthLogin(String accessCode, HttpServletResponse httpServletResponse) {
         KakaoDTO.OAuthToken oAuthToken = kakaoUtil.requestToken(accessCode);
         KakaoDTO.KakaoProfile kakaoProfile = kakaoUtil.requestProfile(oAuthToken);
         String email = kakaoProfile.getKakao_account().getEmail();
 
-        User user = userRepository.findByEmail(email)
+        com.studycoAchl.hackaton.entity.AppUsers appUsers = userRepository.findByEmail(email)
                 .orElseGet(() -> createNewUser(kakaoProfile));
 
-        String token = jwtUtil.createAccessToken(user.getEmail(), "USER");
+        String token = jwtUtil.createAccessToken(appUsers.getEmail(), "USER");
         httpServletResponse.setHeader("Authorization", token);
 
-        return user;
+        return appUsers;
     }
 
-    private User createNewUser(KakaoDTO.KakaoProfile kakaoProfile) {
-        User newUser = new User();
-        newUser.setEmail(kakaoProfile.getKakao_account().getEmail());
-        newUser.setUsername(kakaoProfile.getKakao_account().getProfile().getNickname());
-        newUser.setPassword(passwordEncoder.encode("defaultPassword"));
-        newUser.setToken("defaultToken");
+    private com.studycoAchl.hackaton.entity.AppUsers createNewUser(KakaoDTO.KakaoProfile kakaoProfile) {
+        com.studycoAchl.hackaton.entity.AppUsers newAppUsers = new com.studycoAchl.hackaton.entity.AppUsers();
+        newAppUsers.setEmail(kakaoProfile.getKakao_account().getEmail());
+        newAppUsers.setUsername(kakaoProfile.getKakao_account().getProfile().getNickname());
+        newAppUsers.setPassword(passwordEncoder.encode("defaultPassword"));
+        newAppUsers.setToken("defaultToken");
 
-        return userRepository.save(newUser);
+        return userRepository.save(newAppUsers);
     }
 }
