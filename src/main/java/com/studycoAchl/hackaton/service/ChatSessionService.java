@@ -41,7 +41,7 @@ public class ChatSessionService {
         ChatSession chatSession = ChatSession.builder()
                 .appUsers(appUsers)
                 .subject(subject)
-                .title(title.trim())
+                .chatTitle(title.trim())
                 .messages(new ArrayList<>())
                 .status(ChatSession.SessionStatus.ACTIVE)
                 .build();
@@ -52,12 +52,9 @@ public class ChatSessionService {
     public ChatSessionResponseDto toResponseDto(ChatSession chatSession) {
         return ChatSessionResponseDto.builder()
                 .uuid(chatSession.getUuid())
-                .title(chatSession.getTitle())
+                .chatTitle(chatSession.getChatTitle())
                 .createdData(chatSession.getCreatedData())
-                .updatedAt(chatSession.getUpdatedAt())
-                .status(chatSession.getStatus().toString())
                 .messageCount(chatSession.getMessageCount())
-                .subjectTitle(chatSession.getSubject() != null ? chatSession.getSubject().getTitle() : null)
                 .build();
     }
 
