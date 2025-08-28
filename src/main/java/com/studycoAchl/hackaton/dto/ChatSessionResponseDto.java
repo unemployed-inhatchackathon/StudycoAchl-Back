@@ -15,7 +15,7 @@ import java.util.UUID;
 @AllArgsConstructor
 public class ChatSessionResponseDto {
     private UUID uuid;
-    private String title;
+    private String chatTitle;
     private LocalDateTime createdData;
     private LocalDateTime updatedAt;
 

@@ -28,7 +28,7 @@ public class ChatSession {
     private UUID uuid;
 
     @Column(name = "chatTitle", length = 200)
-    private String title;
+    private String chatTitle;
 
     // JSON으로 메시지 저장
     @JdbcTypeCode(SqlTypes.JSON)
@@ -82,7 +82,7 @@ public class ChatSession {
         this();
         this.appUsers = appUsers;
         this.subject = subject;
-        this.title = title;
+        this.chatTitle = title;
     }
 
     // ========== 메시지 관련 메소드들 (ChatMessage DTO 사용) ==========
@@ -256,11 +256,11 @@ public class ChatSession {
     // ========== 기존 호환성 메소드들 ==========
 
     public void setChatTitle(String chatTitle) {
-        this.title = chatTitle;
+        this.chatTitle = chatTitle;
     }
 
     public String getChatTitle() {
-        return this.title;
+        return this.chatTitle;
     }
 
     public void setCreatedData(LocalDateTime createdData) {

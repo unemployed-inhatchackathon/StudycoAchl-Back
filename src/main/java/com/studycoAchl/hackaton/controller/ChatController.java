@@ -1,7 +1,6 @@
 package com.studycoAchl.hackaton.controller;
 
 import com.studycoAchl.hackaton.dto.ApiResponse;
-import com.studycoAchl.hackaton.dto.ChatMessage;
 import com.studycoAchl.hackaton.dto.ChatSessionResponseDto;
 import com.studycoAchl.hackaton.dto.MessageRequest;
 import com.studycoAchl.hackaton.entity.ChatSession;
@@ -251,7 +250,7 @@ public class ChatController {
             }
 
             ChatSession session = chatSessionService.findById(sessionUuid);
-            session.setTitle(newTitle.trim());
+            session.setChattitle(newTitle.trim());
 
             ChatSession updatedSession = chatSessionService.save(session);
             return ResponseEntity.ok(ApiResponse.success(updatedSession, "세션 제목이 수정되었습니다."));
