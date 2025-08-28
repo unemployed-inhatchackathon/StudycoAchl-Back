@@ -105,7 +105,6 @@ public class ChatController {
      * 채팅 세션 생성
      */
     @PostMapping(value = "/users/{userUuid}/subjects/{subjectUuid}/sessions", consumes = "text/plain")
-    @Transactional
     public ResponseEntity<ApiResponse<ChatSessionResponseDto>> createSession(
             @PathVariable UUID userUuid,
             @PathVariable UUID subjectUuid,
