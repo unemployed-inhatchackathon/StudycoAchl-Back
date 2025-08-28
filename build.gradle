@@ -18,6 +18,7 @@ repositories {
 }
 
 dependencies {
+    // === Database ===
     implementation 'com.google.cloud.sql:mysql-socket-factory-connector-j-8:1.15.0'
     implementation 'mysql:mysql-connector-java:8.0.33'
 
@@ -26,15 +27,23 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
 
-    // === Security (채팅 인증/인가에 필요) ===
+    // === Security & OAuth ===
     implementation 'org.springframework.boot:spring-boot-starter-security'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+
+    // === JWT (인증 기능용) ===
+    implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
     // === WebSocket (실시간 채팅 기능) ===
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     // === AI & OpenAI Integration ===
     implementation 'com.theokanning.openai-gpt3-java:service:0.18.2'
+
+    // === PDF 처리 (요약 기능용) ===
+    implementation 'org.apache.pdfbox:pdfbox:2.0.29'
 
     // === API Documentation ===
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
@@ -87,9 +96,7 @@ configurations {
     all*.exclude group: 'com.h2database', module: 'h2'
 }
 
-
 // === JAR 설정 ===
-
 bootJar {
     archiveFileName = "${project.name}-${project.version}.jar"
     manifest {
