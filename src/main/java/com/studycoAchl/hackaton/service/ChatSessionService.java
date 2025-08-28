@@ -54,10 +54,7 @@ public class ChatSessionService {
                 .uuid(chatSession.getUuid())
                 .chatTitle(chatSession.getChatTitle())
                 .createdData(chatSession.getCreatedData())
-                .updatedAt(chatSession.getUpdatedAt())
-                .status(chatSession.getStatus().toString())
                 .messageCount(chatSession.getMessageCount())
-                .subjectTitle(chatSession.getSubject() != null ? chatSession.getSubject().getTitle() : null)
                 .build();
     }
 
