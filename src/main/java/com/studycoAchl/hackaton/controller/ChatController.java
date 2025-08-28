@@ -250,7 +250,7 @@ public class ChatController {
             }
 
             ChatSession session = chatSessionService.findById(sessionUuid);
-            session.setChattitle(newTitle.trim());
+            session.setChatTitle(newTitle.trim());
 
             ChatSession updatedSession = chatSessionService.save(session);
             return ResponseEntity.ok(ApiResponse.success(updatedSession, "세션 제목이 수정되었습니다."));

@@ -41,7 +41,7 @@ public class ChatSessionService {
         ChatSession chatSession = ChatSession.builder()
                 .appUsers(appUsers)
                 .subject(subject)
-                .chattitle(title.trim())
+                .chatTitle(title.trim())
                 .messages(new ArrayList<>())
                 .status(ChatSession.SessionStatus.ACTIVE)
                 .build();
