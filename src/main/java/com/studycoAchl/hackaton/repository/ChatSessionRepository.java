@@ -34,7 +34,7 @@ public interface ChatSessionRepository extends JpaRepository<ChatSession, UUID> 
     List<ChatSession> findSessionsWithKeywords();
 
     // 키워드로 세션 검색
-    @Query("SELECT cs FROM ChatSession cs WHERE cs.extractedKeywords LIKE %:keyword%")
+    @Query(value = "SELECT * FROM chat_sessions cs WHERE JSON_CONTAINS(cs.extracted_keywords, :keyword, '$')", nativeQuery = true)
     List<ChatSession> findByExtractedKeywordsContaining(@Param("keyword") String keyword);
 
     // 문제가 생성된 세션들

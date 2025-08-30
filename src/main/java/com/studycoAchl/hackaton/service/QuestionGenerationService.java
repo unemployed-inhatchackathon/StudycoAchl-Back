@@ -1,6 +1,7 @@
 package com.studycoAchl.hackaton.service;
 
 import com.theokanning.openai.completion.chat.ChatCompletionRequest;
+import com.theokanning.openai.completion.chat.ChatCompletionResult;
 import com.theokanning.openai.completion.chat.ChatMessage;
 import com.theokanning.openai.completion.chat.ChatMessageRole;
 import com.theokanning.openai.service.OpenAiService;
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +67,35 @@ public class QuestionGenerationService {
             log.error("OpenAI 문제 생성 실패", e);
             // 실패 시 모의 문제 반환
             return generateMockQuestions(keywords, context, questionCount);
+        }
+    }
+
+    public String generateWrongAnswerExplanation(String question, String wrongAnswer, String correctAnswer) {
+        String prompt = String.format(
+                "다음 문제와 오답, 정답을 참고하여 사용자가 선택한 오답에 대한 상세한 해설을 100자 이내로 제공해 주세요.\n\n" +
+                        "문제: %s\n" +
+                        "사용자가 선택한 오답: %s\n" +
+                        "정답: %s\n\n" +
+                        "오답 해설:",
+                question, wrongAnswer, correctAnswer
+        );
+
+        ChatCompletionRequest request = ChatCompletionRequest.builder()
+                .model("gpt-3.5-turbo")
+                .messages(List.of(
+                        new ChatMessage("system", "당신은 사용자에게 오답에 대한 친절하고 상세한 해설을 제공하는 AI 튜터입니다."),
+                        new ChatMessage("user", prompt)
+                ))
+                .temperature(0.7)
+                .maxTokens(200)
+                .build();
+
+        try {
+            ChatCompletionResult response = openAiService.createChatCompletion(request);
+            return response.getChoices().getFirst().getMessage().getContent();
+        } catch (Exception e) {
+            log.error("오답 해설 생성 실패", e);
+            return "오답에 대한 해설을 생성하는 중 오류가 발생했습니다.";
         }
     }
 

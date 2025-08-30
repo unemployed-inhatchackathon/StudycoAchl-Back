@@ -42,7 +42,8 @@ public class ChatSession {
     private LocalDateTime updatedAt;
 
     // 문제 생성 기능을 위한 필드들 (당신 방식 유지)
-    @Column(name = "extracted_keywords", columnDefinition = "TEXT")
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "extracted_keywords", columnDefinition = "JSON")
     private String extractedKeywords;
 
     @Column(name = "last_keyword_extraction")
@@ -181,29 +182,32 @@ public class ChatSession {
             return;
         }
 
-        if (this.extractedKeywords == null || this.extractedKeywords.isEmpty()) {
-            this.extractedKeywords = keyword.trim();
-        } else {
-            List<String> currentKeywords = getExtractedKeywordsList();
-            if (!currentKeywords.contains(keyword.trim())) {
-                this.extractedKeywords += "," + keyword.trim();
+        List<String> currentKeywords = getExtractedKeywordsList();
+        if (!currentKeywords.contains(keyword.trim())) {
+            currentKeywords.add(keyword.trim());
+            try {
+                this.extractedKeywords = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(currentKeywords);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                // 예외 처리
             }
         }
         this.lastKeywordExtraction = LocalDateTime.now();
     }
 
+
+
     /**
      * 키워드 리스트로 반환
      */
     public List<String> getExtractedKeywordsList() {
-        if (extractedKeywords == null || extractedKeywords.isEmpty()) {
+        if (this.extractedKeywords == null || this.extractedKeywords.isEmpty()) {
             return new ArrayList<>();
         }
-        return List.of(extractedKeywords.split(",")).stream()
-                .map(String::trim)
-                .filter(keyword -> !keyword.isEmpty())
-                .distinct()
-                .collect(Collectors.toList());
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(this.extractedKeywords, new com.fasterxml.jackson.core.type.TypeReference<List<String>>() {});
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return new ArrayList<>();
+        }
     }
 
     /**
@@ -254,22 +258,6 @@ public class ChatSession {
     }
 
     // ========== 기존 호환성 메소드들 ==========
-
-    public void setChatTitle(String chatTitle) {
-        this.chatTitle = chatTitle;
-    }
-
-    public String getChatTitle() {
-        return this.chatTitle;
-    }
-
-    public void setCreatedData(LocalDateTime createdData) {
-        this.createdData = createdData;
-    }
-
-    public LocalDateTime getCreatedData() {
-        return this.createdData;
-    }
 
     public void incrementProblemCount() {
         if (this.generatedProblemCount == null) {

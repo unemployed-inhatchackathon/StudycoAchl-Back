@@ -1,5 +1,6 @@
 package com.studycoAchl.hackaton.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.studycoAchl.hackaton.entity.AppUsers;
 import com.studycoAchl.hackaton.entity.Problem;
 import com.studycoAchl.hackaton.entity.ChatSession;
@@ -27,6 +28,7 @@ public class ProblemGenerationService {
     private final UserRepository userRepository;
     private final SubjectRepository subjectRepository;
     private final QuestionGenerationService questionGenerationService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**
      * 키워드 기반 문제 생성 (직접 키워드 입력)
@@ -38,22 +40,26 @@ public class ProblemGenerationService {
         try {
             log.info("키워드 기반 문제 생성 시작 - keywords: {}, count: {}", keywords, questionCount);
 
-            // 사용자와 과목 조회
             AppUsers appUsers = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
             Subject subject = subjectRepository.findById(subjectUuid)
                     .orElseThrow(() -> new RuntimeException("과목을 찾을 수 없습니다: " + subjectUuid));
 
-            // OpenAI로 문제 생성
             String problemsJson = questionGenerationService.generateQuestionsJson(keywords, context, questionCount);
 
-            // 데이터베이스에 저장
+            // 문제풀이 세션 메타데이터 초기화
+            Map<String, Object> sessionMetadataMap = new HashMap<>();
+            sessionMetadataMap.put("status", "WAITING");
+            sessionMetadataMap.put("currentQuestionIndex", 0);
+            sessionMetadataMap.put("totalQuestions", questionCount);
+
             Problem problem = Problem.builder()
                     .problems(problemsJson)
                     .appUsers(appUsers)
                     .subject(subject)
-                    .chatSession(null) // 직접 생성이므로 null
+                    .chatSession(null) // 독립적이므로 null 유지
+                    .sessionMetadata(objectMapper.writeValueAsString(sessionMetadataMap))
                     .createdData(LocalDateTime.now())
                     .build();
 
@@ -89,7 +95,6 @@ public class ProblemGenerationService {
         try {
             log.info("채팅 세션 기반 문제 생성 시작 - sessionId: {}, count: {}", chatSessionUuid, questionCount);
 
-            // 엔티티들 조회
             AppUsers appUsers = userRepository.findById(userUuid)
                     .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다: " + userUuid));
 
@@ -99,35 +104,35 @@ public class ProblemGenerationService {
             ChatSession chatSession = chatSessionRepository.findById(chatSessionUuid)
                     .orElseThrow(() -> new RuntimeException("채팅 세션을 찾을 수 없습니다: " + chatSessionUuid));
 
-            // 채팅에서 키워드 추출 (있으면 사용, 없으면 기본 키워드)
             List<String> keywords;
             String context;
 
             if (chatSession.getExtractedKeywords() != null && !chatSession.getExtractedKeywords().isEmpty()) {
                 keywords = chatSession.getExtractedKeywordsList();
                 context = "채팅 내용을 바탕으로 한 문제";
-                log.info("채팅에서 추출된 키워드 사용: {}", keywords);
             } else {
                 keywords = getDefaultKeywords();
                 context = "일반적인 학습 내용을 바탕으로 한 문제";
-                log.info("기본 키워드 사용: {}", keywords);
             }
 
-            // OpenAI로 문제 생성
             String problemsJson = questionGenerationService.generateQuestionsJson(keywords, context, questionCount);
 
-            // 데이터베이스에 저장
+            // 문제풀이 세션 메타데이터 초기화
+            Map<String, Object> sessionMetadataMap = new HashMap<>();
+            sessionMetadataMap.put("status", "WAITING");
+            sessionMetadataMap.put("currentQuestionIndex", 0);
+            sessionMetadataMap.put("totalQuestions", questionCount);
+
             Problem problem = Problem.builder()
                     .problems(problemsJson)
                     .appUsers(appUsers)
                     .subject(subject)
                     .chatSession(chatSession)
+                    .sessionMetadata(objectMapper.writeValueAsString(sessionMetadataMap))
                     .createdData(LocalDateTime.now())
                     .build();
 
             Problem savedProblem = problemRepository.save(problem);
-
-            // 세션의 문제 생성 카운트 증가
             updateSessionProblemGeneration(chatSession);
 
             log.info("채팅 세션 기반 문제 생성 완료 - problemId: {}", savedProblem.getUuid());
@@ -135,21 +140,11 @@ public class ProblemGenerationService {
             return Map.of(
                     "success", true,
                     "problemUuid", savedProblem.getUuid(),
-                    "questionCount", questionCount,
-                    "keywords", keywords,
-                    "source", "OpenAI GPT-3.5-turbo",
-                    "message", "AI가 " + questionCount + "개의 문제를 생성했습니다!",
-                    "createdAt", savedProblem.getCreatedData(),
-                    "hasExtractedKeywords", chatSession.getExtractedKeywords() != null
+                    "questionCount", questionCount
             );
-
         } catch (Exception e) {
-            log.error("채팅 세션 기반 문제 생성 실패 - sessionId: {}", chatSessionUuid, e);
-            return Map.of(
-                    "success", false,
-                    "error", "AI 문제 생성 실패: " + e.getMessage(),
-                    "errorDetail", "OpenAI API 호출 중 오류가 발생했습니다. API 키와 네트워크를 확인해주세요."
-            );
+            log.error("채팅 세션 기반 문제 생성 실패", e);
+            throw new RuntimeException("문제 생성에 실패했습니다: " + e.getMessage());
         }
     }
 

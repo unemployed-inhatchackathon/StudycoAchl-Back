@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -24,6 +26,10 @@ public class Problem {
 
     @Column(name = "problems", columnDefinition = "JSON")
     private String problems;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "session_metadata", columnDefinition = "JSON")
+    private String sessionMetadata;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "chat_session_uuid", referencedColumnName = "UUID")
